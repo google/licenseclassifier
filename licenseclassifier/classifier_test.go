@@ -20,7 +20,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/google/stringclassifier"
+	"github.com/google/licenseclassifier/stringclassifier"
 )
 
 var (

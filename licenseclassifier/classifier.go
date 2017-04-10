@@ -33,8 +33,8 @@ import (
 	"sync"
 	"unicode"
 
-	"github.com/google/stringclassifier"
-	"github.com/google/stringclassifier/searchset"
+	"github.com/google/licenseclassifier/stringclassifier"
+	"github.com/google/licenseclassifier/stringclassifier/searchset"
 )
 
 // DefaultConfidenceThreshold is the minimum confidence percentage we're
@@ -103,7 +103,7 @@ func (c *License) WithinConfidenceThreshold(conf float64) bool {
 // how confident the classifier is in the result.
 func (c *License) NearestMatch(contents string) *stringclassifier.Match {
 	if !c.hasCommonLicenseWords(contents) {
-		return nil
+		return &stringclassifier.Match{}
 	}
 	m := c.c.NearestMatch(contents)
 	m.Name = strings.TrimSuffix(m.Name, ".header")
@@ -151,7 +151,7 @@ func (c *License) hasCommonLicenseWords(contents string) bool {
 
 const (
 	// LicenseDirectory is the directory where the prototype licenses are kept.
-	LicenseDirectory = "src/github.com/google/licenseclassifier/licenses"
+	LicenseDirectory = "src/github.com/google/licenseclassifier/licenseclassifier/licenses"
 	// LicenseArchive is the name of the archive containing preprocessed
 	// license texts.
 	LicenseArchive = "licenses.db"
