@@ -111,38 +111,38 @@ theory to deconstruct the status quo.
 )
 
 func TestClassify_NearestMatch(t *testing.T) {
-	c := New(FlattenWhitespace)
+	c := New(DefaultConfidenceThreshold, FlattenWhitespace)
 	c.AddValue("gettysburg", gettysburg)
 	c.AddValue("declaration", declaration)
 	c.AddValue("loremipsum", loremipsum)
 
 	tests := []struct {
-		description   string
-		input         string  // input string to match
-		name          string  // name of expected nearest match
-		minConfidence float64 // the lowest confidence accepted for the match
-		maxConfidence float64 // the highest confidence we expect for this match
+		description string
+		input       string  // input string to match
+		name        string  // name of expected nearest match
+		minConf     float64 // the lowest confidence accepted for the match
+		maxConf     float64 // the highest confidence we expect for this match
 	}{
 		{
-			description:   "Full Declaration",
-			input:         declaration,
-			name:          "declaration",
-			minConfidence: 1.0,
-			maxConfidence: 1.0,
+			description: "Full Declaration",
+			input:       declaration,
+			name:        "declaration",
+			minConf:     1.0,
+			maxConf:     1.0,
 		},
 		{
-			description:   "Modified Lorem",
-			input:         modifiedLorem,
-			name:          "loremipsum",
-			minConfidence: 0.90,
-			maxConfidence: 0.91,
+			description: "Modified Lorem",
+			input:       modifiedLorem,
+			name:        "loremipsum",
+			minConf:     0.90,
+			maxConf:     0.91,
 		},
 		{
-			description:   "Modified Gettysburg",
-			input:         modifiedGettysburg,
-			name:          "gettysburg",
-			minConfidence: 0.86,
-			maxConfidence: 0.87,
+			description: "Modified Gettysburg",
+			input:       modifiedGettysburg,
+			name:        "gettysburg",
+			minConf:     0.86,
+			maxConf:     0.87,
 		},
 	}
 
@@ -152,24 +152,29 @@ func TestClassify_NearestMatch(t *testing.T) {
 		if got, want := m.Name, tt.name; got != want {
 			t.Errorf("NearestMatch(%q) = %q, want %q", tt.description, got, want)
 		}
-		if got, want := m.Confidence, tt.minConfidence; got < want {
+		if got, want := m.Confidence, tt.minConf; got < want {
 			t.Errorf("NearestMatch(%q) returned confidence %v, want minimum of %v", tt.description, got, want)
 		}
-		if got, want := m.Confidence, tt.maxConfidence; got > want {
+		if got, want := m.Confidence, tt.maxConf; got > want {
 			t.Errorf("NearestMatch(%q) = %v, want maxiumum of %v", tt.description, got, want)
 		}
 	}
 }
 
 type result struct {
-	key           string  // key of expected nearest match
-	offset        int     // offset of match in unknown string
-	minConfidence float64 // the lowest confidence accepted for the match
-	maxConfidence float64 // the highest confidence we expect for this match
+	key    string // key of expected nearest match
+	offset int    // offset of match in unknown string
+
+	// The confidence values are retrieved by simply running the classifier
+	// and noting the output. A value greater than the "max" is fine and
+	// the tests can be adjusted to account for it. A value less than "min"
+	// should be carefully scrutinzed before adjusting the tests.
+	minConf float64 // the lowest confidence accepted for the match
+	maxConf float64 // the highest confidence we expect for this match
 }
 
 func TestClassify_MultipleMatch(t *testing.T) {
-	c := New(FlattenWhitespace)
+	c := New(DefaultConfidenceThreshold, FlattenWhitespace)
 	c.AddValue("gettysburg", gettysburg)
 	c.AddValue("declaration", declaration)
 	c.AddValue("declaration-close", declaration[:len(declaration)/2-1]+"_"+declaration[len(declaration)/2:])
@@ -185,10 +190,10 @@ func TestClassify_MultipleMatch(t *testing.T) {
 			input:       postmodernThesisNarratives + declaration + postmodernThesisCollapse,
 			want: []result{
 				{
-					key:           "declaration",
-					offset:        842,
-					minConfidence: 1.0,
-					maxConfidence: 1.0,
+					key:     "declaration",
+					offset:  842,
+					minConf: 1.0,
+					maxConf: 1.0,
 				},
 			},
 		},
@@ -197,10 +202,10 @@ func TestClassify_MultipleMatch(t *testing.T) {
 			input:       postmodernThesisNarratives + modifiedLorem + postmodernThesisCollapse,
 			want: []result{
 				{
-					key:           "loremipsum",
-					offset:        842,
-					minConfidence: 0.90,
-					maxConfidence: 0.91,
+					key:     "loremipsum",
+					offset:  842,
+					minConf: 0.90,
+					maxConf: 0.91,
 				},
 			},
 		},
@@ -209,34 +214,34 @@ func TestClassify_MultipleMatch(t *testing.T) {
 			input:       postmodernThesisNarratives + modifiedLorem + postmodernThesisCollapse + modifiedGettysburg + postmodernThesisFatalFlaw,
 			want: []result{
 				{
-					key:           "loremipsum",
-					offset:        842,
-					minConfidence: 0.90,
-					maxConfidence: 0.91,
+					key:     "loremipsum",
+					offset:  842,
+					minConf: 0.90,
+					maxConf: 0.91,
 				},
 				{
-					key:           "gettysburg",
-					offset:        1896,
-					minConfidence: 0.85,
-					maxConfidence: 0.86,
+					key:     "gettysburg",
+					offset:  1900,
+					minConf: 0.86,
+					maxConf: 0.87,
 				},
 			},
 		},
 		{
-			description: "Partial matches of same text",
+			description: "Partial matches of similar text",
 			input:       postmodernThesisNarratives + modifiedLorem + postmodernThesisCollapse + lessModifiedLorem + postmodernThesisFatalFlaw,
 			want: []result{
 				{
-					key:           "loremipsum",
-					offset:        1896,
-					minConfidence: 0.96,
-					maxConfidence: 0.97,
+					key:     "loremipsum",
+					offset:  1900,
+					minConf: 0.98,
+					maxConf: 0.99,
 				},
 				{
-					key:           "loremipsum",
-					offset:        842,
-					minConfidence: 0.90,
-					maxConfidence: 0.91,
+					key:     "loremipsum",
+					offset:  842,
+					minConf: 0.90,
+					maxConf: 0.91,
 				},
 			},
 		},
@@ -256,7 +261,6 @@ func TestClassify_MultipleMatch(t *testing.T) {
 		matches := c.MultipleMatch(tt.input)
 		if len(matches) != len(tt.want) {
 			t.Errorf("MultipleMatch(%q) not enough matches = %v, want %v", tt.description, len(matches), len(tt.want))
-			continue
 		}
 
 		for i := 0; i < len(matches); i++ {
@@ -265,10 +269,10 @@ func TestClassify_MultipleMatch(t *testing.T) {
 			if got, want := m.Name, w.key; got != want {
 				t.Errorf("MultipleMatch(%q) = %q, want %q", tt.description, got, want)
 			}
-			if got, want := m.Confidence, w.minConfidence; got < want {
+			if got, want := m.Confidence, w.minConf; got < want {
 				t.Errorf("MultipleMatch(%q) %q = %v, want minimum of %v", tt.description, w.key, got, want)
 			}
-			if got, want := m.Confidence, w.maxConfidence; got > want {
+			if got, want := m.Confidence, w.maxConf; got > want {
 				t.Errorf("MultipleMatch(%q) %q = %v, want maximum of %v", tt.description, w.key, got, want)
 			}
 			if got, want := m.Offset, w.offset; got != want {
@@ -520,7 +524,7 @@ func TestClassify_DiffRangeEnd(t *testing.T) {
 }
 
 func BenchmarkClassifier(b *testing.B) {
-	c := New(FlattenWhitespace)
+	c := New(DefaultConfidenceThreshold, FlattenWhitespace)
 	c.AddValue("gettysburg", gettysburg)
 	c.AddValue("declaration", declaration)
 	c.AddValue("loremipsum", loremipsum)

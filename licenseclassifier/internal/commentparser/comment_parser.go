@@ -70,17 +70,26 @@ type Comments []*Comment
 func (c Comments) ChunkIterator() <-chan Comments {
 	ch := make(chan Comments)
 	go func() {
-		index := 0
-		prevLine := c.StartLine()
+		defer close(ch)
 
-		for ; index < len(c); index++ {
+		if len(c) == 0 {
+			return
+		}
+
+		prevChunk := c[0]
+		for index := 0; index < len(c); index++ {
 			var chunk Comments
 			for ; index < len(c); index++ {
-				if c[index].StartLine > prevLine+2 {
+				if c[index].StartLine > prevChunk.StartLine+1 {
 					break
 				}
+				if c[index].StartLine == prevChunk.StartLine+2 {
+					if c[index].StartLine != c[index].EndLine || prevChunk.StartLine != prevChunk.EndLine {
+						break
+					}
+				}
 				chunk = append(chunk, c[index])
-				prevLine = c[index].StartLine
+				prevChunk = c[index]
 			}
 			if len(chunk) == 0 {
 				break
@@ -91,11 +100,9 @@ func (c Comments) ChunkIterator() <-chan Comments {
 				break
 			}
 
-			prevLine = c[index].StartLine
+			prevChunk = c[index]
 			index--
 		}
-
-		close(ch)
 	}()
 	return ch
 }
@@ -197,25 +204,7 @@ func (i *input) lex() {
 		default:
 			startLine := i.pos.line
 			var comment bytes.Buffer
-			if i.singleLineComment() { // Single line comment
-				for {
-					if i.eof() {
-						log.Printf(eofInSingleLineComment, i.pos.line)
-						return
-					}
-					c = i.readRune()
-					if c == '\n' {
-						i.unreadRune(c)
-						break
-					}
-					comment.WriteRune(c)
-				}
-				i.comments = append(i.comments, &Comment{
-					StartLine: startLine,
-					EndLine:   i.pos.line,
-					Text:      comment.String(),
-				})
-			} else if ok, start, end := i.multiLineComment(); ok { // Multiline comment
+			if ok, start, end := i.multiLineComment(); ok { // Multiline comment
 				nesting := 0
 				startLine := i.pos.line
 				for {
@@ -244,6 +233,24 @@ func (i *input) lex() {
 					EndLine:   i.pos.line,
 					Text:      comment.String(),
 				})
+			} else if i.singleLineComment() { // Single line comment
+				for {
+					if i.eof() {
+						log.Printf(eofInSingleLineComment, i.pos.line)
+						return
+					}
+					c = i.readRune()
+					if c == '\n' {
+						i.unreadRune(c)
+						break
+					}
+					comment.WriteRune(c)
+				}
+				i.comments = append(i.comments, &Comment{
+					StartLine: startLine,
+					EndLine:   i.pos.line,
+					Text:      comment.String(),
+				})
 			}
 		}
 
@@ -254,7 +261,17 @@ func (i *input) lex() {
 // singleLineComment returns 'true' if we've run across a single line comment
 // in the given language.
 func (i *input) singleLineComment() bool {
-	return i.match(i.lang.SingleLineCommentStart())
+	if i.match(i.lang.SingleLineCommentStart()) {
+		return true
+	}
+
+	if i.lang == language.SQL {
+		return i.match(language.MySQL.SingleLineCommentStart())
+	} else if i.lang == language.ObjectiveC {
+		return i.match(language.Matlab.SingleLineCommentStart())
+	}
+
+	return false
 }
 
 // multiLineComment returns 'true' if we've run across a multiline comment in
@@ -263,6 +280,17 @@ func (i *input) multiLineComment() (bool, string, string) {
 	if s := i.lang.MultilineCommentStart(); i.match(s) {
 		return true, s, i.lang.MultilineCommentEnd()
 	}
+
+	if i.lang == language.SQL {
+		if s := language.MySQL.MultilineCommentStart(); i.match(s) {
+			return true, s, language.MySQL.MultilineCommentEnd()
+		}
+	} else if i.lang == language.ObjectiveC {
+		if s := language.Matlab.MultilineCommentStart(); i.match(s) {
+			return true, s, language.Matlab.MultilineCommentEnd()
+		}
+	}
+
 	return false, "", ""
 }
 

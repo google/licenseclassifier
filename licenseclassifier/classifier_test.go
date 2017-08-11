@@ -24,11 +24,15 @@ import (
 )
 
 var (
-	apache20, bsd3, gpl20 string
-	classifier            *License
+	agpl30Header, apache20, bsd3, gpl20 string
+	classifier                          *License
 )
 
 func TestMain(m *testing.M) {
+	a30h, err := ReadLicenseFile("AGPL-3.0.header.txt")
+	if err != nil {
+		log.Fatalf("error reading contents of AGPL-3.0.header.txt: %v", err)
+	}
 	a20, err := ReadLicenseFile("Apache-2.0.txt")
 	if err != nil {
 		log.Fatalf("error reading contents of Apache-2.0.txt: %v", err)
@@ -42,6 +46,7 @@ func TestMain(m *testing.M) {
 		log.Fatalf("error reading contents of GPL-2.0.txt: %v", err)
 	}
 
+	agpl30Header = TrimExtraneousTrailingText(string(a30h))
 	apache20 = TrimExtraneousTrailingText(string(a20))
 	bsd3 = TrimExtraneousTrailingText(string(b3))
 	gpl20 = TrimExtraneousTrailingText(string(g2))
@@ -61,6 +66,12 @@ func TestClassifier_NearestMatch(t *testing.T) {
 		wantLicense    string
 		wantConfidence float64
 	}{
+		{
+			description:    "AGPL 3.0 license",
+			filename:       "AGPL-3.0.txt",
+			wantLicense:    "AGPL-3.0",
+			wantConfidence: 1.0,
+		},
 		{
 			description:    "Apache 2.0 license",
 			filename:       "Apache-2.0.txt",
@@ -151,6 +162,77 @@ func TestClassifier_MultipleMatch(t *testing.T) {
 		m := classifier.MultipleMatch(tt.text, false)
 		if len(m) != len(tt.want) {
 			t.Fatalf("MultipleMatch(%q) number matches: %v, want %v", tt.description, len(m), len(tt.want))
+			continue
+		}
+
+		for i := 0; i < len(m); i++ {
+			w := tt.want[i]
+			if got, want := m[i].Name, w.Name; got != want {
+				t.Errorf("MultipleMatch(%q) = %q, want %q", tt.description, got, want)
+			}
+			if got, want := m[i].Confidence, w.Confidence; got < want {
+				t.Errorf("MultipleMatch(%q) = %v, want %v", tt.description, got, want)
+			}
+		}
+	}
+}
+
+func TestClassifier_MultipleMatch_Headers(t *testing.T) {
+	tests := []struct {
+		description string
+		text        string
+		want        stringclassifier.Matches
+	}{
+		{
+			description: "AGPL-3.0 header",
+			text:        "Copyright (c) 2016 Yoyodyne, Inc.\n" + agpl30Header,
+			want: stringclassifier.Matches{
+				{
+					Name:       "AGPL-3.0",
+					Confidence: 1.0,
+					Offset:     0,
+				},
+			},
+		},
+		{
+			description: "Modified LGPL-2.1 header",
+			text: `Common Widget code.
+
+Copyright (C) 2013-2015 Yoyodyne, Inc.
+
+This library is free software; you can redistribute it and/or
+modify it under the terms of the GNU Lesser General Public
+License as published by the Free Software Foundation; either
+version 2.1 of the License, or (at your option) any later version (but not!).
+
+This library is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+Lesser General Public License for more details.
+
+You should have received a copy of the GNU Lesser General Public
+License along with this library; if not, write to the Free Software
+Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+`,
+			want: stringclassifier.Matches{
+				{
+					Name:       "LGPL-2.1",
+					Confidence: 0.97,
+					Offset:     197,
+				},
+			},
+		},
+	}
+
+	classifier.Threshold = 0.90
+	defer func() {
+		classifier.Threshold = DefaultConfidenceThreshold
+	}()
+	for _, tt := range tests {
+		m := classifier.MultipleMatch(tt.text, true)
+		if len(m) != len(tt.want) {
+			t.Errorf("MultipleMatch(%q) number matches: %v, want %v", tt.description, len(m), len(tt.want))
+			continue
 		}
 
 		for i := 0; i < len(m); i++ {
@@ -277,13 +359,13 @@ func TestClassifier_WithinConfidenceThreshold(t *testing.T) {
 		classifier.Threshold = 0.93
 		m = classifier.NearestMatch(tt.text)
 		if got := classifier.WithinConfidenceThreshold(m.Confidence); got != tt.conf93 {
-			t.Errorf("WithinConfidenceThreshold(%q) = %v, want %v", tt.description, true, false)
+			t.Errorf("WithinConfidenceThreshold(%q) = %v, want %v", tt.description, got, tt.conf93)
 		}
 
 		classifier.Threshold = 0.05
 		m = classifier.NearestMatch(tt.text)
 		if got := classifier.WithinConfidenceThreshold(m.Confidence); got != tt.conf5 {
-			t.Errorf("WithinConfidenceThreshold(%q) = %v, want %v", tt.description, true, false)
+			t.Errorf("WithinConfidenceThreshold(%q) = %v, want %v", tt.description, got, tt.conf5)
 		}
 	}
 }
@@ -308,88 +390,75 @@ leo. Mattis commodo sed accumsan at in.
 		{"Some rights reserved.\n", "\n"},
 		{"@license\n", "\n"},
 
-		// Separator lines.
-		{strings.Repeat("-", 80) + "\n", "\n"},
-		{strings.Repeat("=", 80) + "\n", "\n"},
-		{"/*\n", "\n"},
-		{"/*\n * Precursor text\n */\n", " * precursor text\n"},
-
 		// Now with wanted texts.
 		{
 			original: `The MIT License
 
 Copyright (c) 2016, Yoyodyne, Inc.
 All rights reserved.
-
--------------------------------------------------------------------------------
 ` + want,
 			want: strings.ToLower(want),
 		},
 	}
 
 	for _, tt := range tests {
-		got := removeIgnorableTexts(strings.ToLower(tt.original))
-		if got != tt.want {
+		if got := removeIgnorableTexts(strings.ToLower(tt.original)); got != tt.want {
 			t.Errorf("Mismatch(%q) =>\n%s\nwant:\n%s", tt.original, got, tt.want)
 		}
 	}
 }
 
-func TestRemoveDecorativeLines(t *testing.T) {
+func TestRemoveShebangLine(t *testing.T) {
 	tests := []struct {
 		original string
 		want     string
 	}{
 		{
-			original: `*
- * This is the first line we want.
- * This is the second line we want.
- * This is the third line we want.
- * This is the last line we want.
+			original: "",
+			want:     "",
+		},
+		{
+			original: "#!/usr/bin/env python -C",
+			want:     "#!/usr/bin/env python -C",
+		},
+		{
+			original: `#!/usr/bin/env python -C
+# First line of license text.
+# Second line of license text.
 `,
-			want: ` * This is the first line we want.
- * This is the second line we want.
- * This is the third line we want.
- * This is the last line we want.
+			want: `# First line of license text.
+# Second line of license text.
 `,
 		},
 		{
-			original: `===---------------------------------------------===
- ***                                             ***
- * This is the first line we want.
- * This is the second line we want.
- * This is the third line we want.
- * This is the last line we want.
- ***                                             ***
- ===---------------------------------------------===
+			original: `# First line of license text.
+# Second line of license text.
 `,
-			want: ` * This is the first line we want.
- * This is the second line we want.
- * This is the third line we want.
- * This is the last line we want.
+			want: `# First line of license text.
+# Second line of license text.
 `,
 		},
 	}
 
 	for _, tt := range tests {
-		got := removeDecorativeLines(tt.original)
+		got := removeShebangLine(tt.original)
 		if got != tt.want {
-			t.Errorf("Mismatch => %v, want %v", got, tt.want)
+			t.Errorf("RemoveShebangLine(%q) =>\n%s\nwant:\n%s", tt.original, got, tt.want)
 		}
 	}
 }
 
-func TestRemoveCommonPrefix(t *testing.T) {
+func TestRemoveNonWords(t *testing.T) {
 	tests := []struct {
 		original string
 		want     string
 	}{
 		{
-			original: `# Hello
-# World
+			original: `# # Hello
+## World
 `,
-			want: `Hello
-World
+			want: `  Hello
+ World
 `,
 		},
 		{
@@ -397,9 +466,9 @@ World
  * * item 1
  * * item 2
 `,
-			want: `This text has a bulleted list:
-* item 1
-* item 2
+			want: `  This text has a bulleted list
+   item 1
+   item 2
 `,
 		},
 		{
@@ -410,9 +479,12 @@ World
  * * item 2
 
 `,
-			want: `This text has a bulleted list:
-* item 1
-* item 2
+			want: `
+
+  This text has a bulleted list
+   item 1
+   item 2
+
 `,
 		},
 		{
@@ -420,42 +492,77 @@ World
 // 1. item 1
 // 2. item 2
 `,
-			want: `This text has a bulleted list:
-1. item 1
-2. item 2
+			want: ` This text has a bulleted list
+ 1 item 1
+ 2 item 2
 `,
 		},
 		{
-			original: `Copyright (c) 1998 Yoyodyne, Inc.
+			original: `// «Copyright (c) 1998 Yoyodyne, Inc.»
 // This text has a bulleted list:
 // 1. item 1
 // 2. item 2
 `,
-			want: `This text has a bulleted list:
-1. item 1
-2. item 2
+			want: ` «Copyright c 1998 Yoyodyne Inc»
+ This text has a bulleted list
+ 1 item 1
+ 2 item 2
 `,
 		},
 		{
-			original: `«Copyright (c) 1998 Yoyodyne, Inc.»
-// This text has a bulleted list:
-// 1. item 1
-// 2. item 2
+			original: `*
+ * This is the first line we want.
+ * This is the second line we want.
+ * This is the third line we want.
+ * This is the last line we want.
 `,
-			want: `This text has a bulleted list:
-1. item 1
-2. item 2
+			want: `
+  This is the first line we want
+  This is the second line we want
+  This is the third line we want
+  This is the last line we want
 `,
 		},
 		{
-			original: `This text is a bit alliterative.
-The lines all start with 'T'.
-That's not normal, is it?
+			original: `===---------------------------------------------===
+***
+* This is the first line we want.
+* This is the second line we want.
+* This is the third line we want.
+* This is the last line we want.
+***
+===---------------------------------------------===
 `,
-			want: `This text is a bit alliterative.
-The lines all start with 'T'.
-That's not normal, is it?
+			want: `
+
+ This is the first line we want
+ This is the second line we want
+ This is the third line we want
+ This is the last line we want
+
+
 `,
+		},
+		{
+			original: strings.Repeat("-", 80),
+			want:     "",
+		},
+		{
+			original: strings.Repeat("=", 80),
+			want:     "",
+		},
+		{
+			original: "/*\n",
+			want:     "\n",
+		},
+		{
+			original: "/*\n * precursor text\n */\n",
+			want:     "\n  precursor text\n \n",
+		},
+		// Test for b/63540492.
+		{
+			original: " */\n",
+			want:     " \n",
 		},
 		{
 			original: "",
@@ -464,9 +571,8 @@ That's not normal, is it?
 	}
 
 	for _, tt := range tests {
-		got := removeCommonPrefix(tt.original)
-		if got != tt.want {
-			t.Errorf("Mismatch => %v, want %v", got, tt.want)
+		if got := removeNonWords(tt.original); got != tt.want {
+			t.Errorf("Mismatch(%q) => %v, want %v", tt.original, got, tt.want)
 		}
 	}
 }

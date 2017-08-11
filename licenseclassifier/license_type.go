@@ -135,6 +135,7 @@ const (
 	OSL30                       = "OSL-3.0"
 	PHP301                      = "PHP-3.01"
 	PHP30                       = "PHP-3.0"
+	PIL                         = "PIL"
 	Python20                    = "Python-2.0"
 	QPL10                       = "QPL-1.0"
 	Ruby                        = "Ruby"
@@ -269,6 +270,7 @@ var (
 		OpenSSL,
 		PHP301,
 		PHP30,
+		PIL,
 		Python20,
 		SGIB10,
 		SGIB11,
@@ -295,6 +297,7 @@ var (
 
 	// unencumbered - Licenses that basically declare that the code is "free for any use".
 	unencumberedType = sets.NewStringSet(
+		CC010,
 		Unlicense,
 	)
 
@@ -304,7 +307,6 @@ var (
 	// fall into this category.
 	byExceptionOnlyType = sets.NewStringSet(
 		Beerware,
-		CC010,
 	)
 
 	// forbidden - Licenses that are forbidden to be used.
@@ -326,6 +328,9 @@ var (
 		CCBYNCSA25,
 		CCBYNCSA30,
 		CCBYNCSA40,
+		Facebook2Clause,
+		Facebook3Clause,
+		FacebookExamples,
 		WTFPL,
 	)
 

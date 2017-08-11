@@ -45,7 +45,7 @@ func ArchiveLicenses(licenses []string, w io.Writer) error {
 			continue
 		}
 
-		contents, err := licenseclassifier.ReadLicenseFile(license)
+		contents, err := licenseclassifier.ReadLicenseFile(filepath.Join(licenseclassifier.LicenseDirectory, license))
 		if err != nil {
 			return err
 		}

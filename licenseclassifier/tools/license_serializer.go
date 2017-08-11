@@ -25,12 +25,16 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"strings"
 
-	"github.com/google/licenseclassifier"
-	"github.com/google/licenseclassifier/serializer"
+	"github.com/google/licenseclassifier/licenseclassifier"
+	"github.com/google/licenseclassifier/licenseclassifier/serializer"
 )
 
-var outputDir = flag.String("output", "", "output directory")
+var (
+	forbiddenOnly = flag.Bool("forbidden", false, "serialize only forbidden licenses")
+	outputDir     = flag.String("output", "", "output directory")
+)
 
 func init() {
 	flag.Usage = func() {
@@ -48,7 +52,12 @@ Options:
 func main() {
 	flag.Parse()
 
-	fn := filepath.Join(*outputDir, licenseclassifier.LicenseArchive)
+	archiveName := licenseclassifier.LicenseArchive
+	if *forbiddenOnly {
+		archiveName = licenseclassifier.ForbiddenLicenseArchive
+	}
+
+	fn := filepath.Join(*outputDir, archiveName)
 	out, err := os.Create(fn)
 	if err != nil {
 		log.Fatalf("error: cannot create file %q: %v", fn, err)
@@ -62,7 +71,9 @@ func main() {
 
 	var licenses []string
 	for _, lic := range lics {
-		licenses = append(licenses, lic.Name())
+		if !*forbiddenOnly || licenseclassifier.LicenseType(strings.TrimSuffix(lic.Name(), ".txt")) == "FORBIDDEN" {
+			licenses = append(licenses, lic.Name())
+		}
 	}
 
 	if err := serializer.ArchiveLicenses(licenses, out); err != nil {

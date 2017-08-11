@@ -36,14 +36,15 @@ import (
 	"sync"
 	"time"
 
-	"github.com/google/licenseclassifier"
-	"github.com/google/licenseclassifier/internal/commentparser"
-	"github.com/google/licenseclassifier/internal/commentparser/language"
+	"github.com/google/licenseclassifier/licenseclassifier"
+	"github.com/google/licenseclassifier/licenseclassifier/internal/commentparser"
+	"github.com/google/licenseclassifier/licenseclassifier/internal/commentparser/language"
 )
 
 var (
-	threshold = flag.Float64("threshold", licenseclassifier.DefaultConfidenceThreshold, "confidence threshold")
-	headers   = flag.Bool("headers", false, "match license headers")
+	forbiddenOnly = flag.Bool("forbidden", false, "identify using forbidden licenses archive")
+	threshold     = flag.Float64("threshold", licenseclassifier.DefaultConfidenceThreshold, "confidence threshold")
+	headers       = flag.Bool("headers", false, "match license headers")
 )
 
 // licenseType is the assumed type of the unknown license.
@@ -84,7 +85,13 @@ Options:
 func main() {
 	flag.Parse()
 
-	lc, err := licenseclassifier.New(*threshold)
+	var lc *licenseclassifier.License
+	var err error
+	if *forbiddenOnly {
+		lc, err = licenseclassifier.NewWithForbiddenLicenses(*threshold)
+	} else {
+		lc, err = licenseclassifier.New(*threshold)
+	}
 	if err != nil {
 		log.Fatalf("cannot create license classifier: %v", err)
 	}

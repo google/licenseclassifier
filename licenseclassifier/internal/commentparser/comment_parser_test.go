@@ -292,6 +292,104 @@ I don't want to go on all day here! <-- notice the quote in there!
 				},
 			},
 		},
+		{
+			description: "SQL using MySQL-style comments",
+			lang:        language.SQL,
+			source: `/*
+ * The first multiline line.
+ * The second multiline line.
+ */
+ # The first single line comment.
+ # The second single line comment.
+`,
+			want: []*Comment{
+				{
+					StartLine: 1,
+					EndLine:   4,
+					Text: `
+ * The first multiline line.
+ * The second multiline line.
+ `,
+				},
+				{
+					StartLine: 5,
+					EndLine:   5,
+					Text:      " The first single line comment.",
+				},
+				{
+					StartLine: 6,
+					EndLine:   6,
+					Text:      " The second single line comment.",
+				},
+			},
+		},
+		{
+			description: "SQL using MySQL-style comments",
+			lang:        language.SQL,
+			source: `-- The first single line comment.
+/*
+ * The first multiline line.
+ * The second multiline line.
+ */
+ -- The second single line comment.
+`,
+			want: []*Comment{
+				{
+					StartLine: 1,
+					EndLine:   1,
+					Text:      " The first single line comment.",
+				},
+				{
+					StartLine: 2,
+					EndLine:   5,
+					Text: `
+ * The first multiline line.
+ * The second multiline line.
+ `,
+				},
+				{
+					StartLine: 6,
+					EndLine:   6,
+					Text:      " The second single line comment.",
+				},
+			},
+		},
+		{
+			description: "Matlab language - Single Line Comments",
+			lang:        language.ObjectiveC, // Matlab has same extension as Objective-C.
+			source: `% Copyright 2017 Yoyodyne Inc.
+
+clear;
+close all;
+`,
+			want: []*Comment{
+				{
+					StartLine: 1,
+					EndLine:   1,
+					Text:      " Copyright 2017 Yoyodyne Inc.",
+				},
+			},
+		},
+		{
+			description: "Matlab language - Multi-Line Comments",
+			lang:        language.ObjectiveC, // Matlab has same extension as Objective-C.
+			source: `%{ Multiline comment start.
+  Second line of multiline comment.
+%}
+
+clear;
+close all;
+`,
+			want: []*Comment{
+				{
+					StartLine: 1,
+					EndLine:   3,
+					Text: ` Multiline comment start.
+  Second line of multiline comment.
+`,
+				},
+			},
+		},
 	}
 
 	for _, tt := range tests {
@@ -340,11 +438,8 @@ func TestCommentParser_ChunkIterator(t *testing.T) {
 			comments: Comments{
 				{StartLine: 1, EndLine: 1, Text: "Block 1 line 1"},
 				{StartLine: 2, EndLine: 2, Text: "Block 1 line 2"},
-				{StartLine: 5, EndLine: 5, Text: "Block 2 line 1"},
-				{StartLine: 6, EndLine: 6, Text: "Block 2 line 2"},
-				{StartLine: 10, EndLine: 10, Text: "Block 3 line 1"},
-				{StartLine: 11, EndLine: 11, Text: "Block 3 line 2"},
-				{StartLine: 13, EndLine: 13, Text: "Block 3 line 3"},
+				{StartLine: 4, EndLine: 4, Text: "Block 2 line 1"},
+				{StartLine: 5, EndLine: 5, Text: "Block 2 line 2"},
 			},
 			want: []Comments{
 				Comments{
@@ -352,13 +447,8 @@ func TestCommentParser_ChunkIterator(t *testing.T) {
 					{StartLine: 2, EndLine: 2, Text: "Block 1 line 2"},
 				},
 				Comments{
-					{StartLine: 5, EndLine: 5, Text: "Block 2 line 1"},
-					{StartLine: 6, EndLine: 6, Text: "Block 2 line 2"},
-				},
-				Comments{
-					{StartLine: 10, EndLine: 10, Text: "Block 3 line 1"},
-					{StartLine: 11, EndLine: 11, Text: "Block 3 line 2"},
-					{StartLine: 13, EndLine: 13, Text: "Block 3 line 3"},
+					{StartLine: 4, EndLine: 4, Text: "Block 2 line 1"},
+					{StartLine: 5, EndLine: 5, Text: "Block 2 line 2"},
 				},
 			},
 		},
@@ -387,6 +477,23 @@ func TestCommentParser_ChunkIterator(t *testing.T) {
 				Comments{
 					{StartLine: 4, EndLine: 4, Text: "Block 2 line 1"},
 					{StartLine: 5, EndLine: 5, Text: "Block 2 line 2"},
+				},
+			},
+		},
+		{
+			description: "Mixed Multiline / Single Line Comments",
+			comments: []*Comment{
+				{StartLine: 1, EndLine: 1, Text: " The first single line comment."},
+				{StartLine: 2, EndLine: 2, Text: " The second single line comment."},
+				{StartLine: 4, EndLine: 7, Text: "\n * The first multiline line.\n * The second multiline line.\n"},
+			},
+			want: []Comments{
+				Comments{
+					{StartLine: 1, EndLine: 1, Text: " The first single line comment."},
+					{StartLine: 2, EndLine: 2, Text: " The second single line comment."},
+				},
+				Comments{
+					{StartLine: 4, EndLine: 7, Text: "\n * The first multiline line.\n * The second multiline line.\n"},
 				},
 			},
 		},

@@ -27,9 +27,9 @@ import (
 	"strings"
 	"unicode"
 
-	"github.com/google/licenseclassifier"
-	"github.com/google/licenseclassifier/internal/sets"
-	"github.com/google/stringclassifier/searchset"
+	"github.com/google/licenseclassifier/licenseclassifier"
+	"github.com/google/licenseclassifier/licenseclassifier/internal/sets"
+	"github.com/google/licenseclassifier/stringclassifier/searchset"
 )
 
 var (
@@ -96,16 +96,16 @@ func main() {
 
 		// Count the number of words used by the license.
 		for _, tok := range set.Tokens {
-			if common.Contains(tok.Token) || unicode.IsPunct([]rune(tok.Token)[0]) ||
-				unicode.IsDigit([]rune(tok.Token)[0]) || len(tok.Token) < 3 {
+			if common.Contains(tok.Text) || unicode.IsPunct([]rune(tok.Text)[0]) ||
+				unicode.IsDigit([]rune(tok.Text)[0]) || len(tok.Text) < 3 {
 				continue
 			}
 
-			wordMap[tok.Token]++
-			if licenseMap[tok.Token] == nil {
-				licenseMap[tok.Token] = make(map[string]int)
+			wordMap[tok.Text]++
+			if licenseMap[tok.Text] == nil {
+				licenseMap[tok.Text] = make(map[string]int)
 			}
-			licenseMap[tok.Token][base]++
+			licenseMap[tok.Text][base]++
 		}
 	}
 

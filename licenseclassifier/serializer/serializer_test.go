@@ -21,6 +21,7 @@ import (
 	"io"
 	"log"
 	"os"
+	"path/filepath"
 	"reflect"
 	"sort"
 	"strings"
@@ -37,13 +38,13 @@ var (
 
 func TestMain(m *testing.M) {
 	var err error
-	apache20Header, err = licenseclassifier.ReadLicenseFile("Apache-2.0.header.txt")
+	apache20Header, err = licenseclassifier.ReadLicenseFile(filepath.Join(licenseclassifier.LicenseDirectory, "Apache-2.0.header.txt"))
 	if err != nil {
 		log.Fatalf("error reading contents of Apache-2.0.header.txt: %v", err)
 	}
 	normApache = normalize(string(apache20Header))
 
-	mit, err = licenseclassifier.ReadLicenseFile("MIT.txt")
+	mit, err = licenseclassifier.ReadLicenseFile(filepath.Join(licenseclassifier.LicenseDirectory, "MIT.txt"))
 	if err != nil {
 		log.Fatalf("error reading contents of MIT.txt: %v", err)
 	}
@@ -183,8 +184,8 @@ func compareSearchSets(x, y *searchset.SearchSet) error {
 		return fmt.Errorf("Lengths differ = %d vs %d", len(x.Tokens), len(y.Tokens))
 	}
 	for i := 0; i < len(x.Tokens); i++ {
-		if x.Tokens[i].Token != y.Tokens[i].Token {
-			return fmt.Errorf("Token values at %d differ = %q vs %q", i, x.Tokens[i].Token, y.Tokens[i].Token)
+		if x.Tokens[i].Text != y.Tokens[i].Text {
+			return fmt.Errorf("Token values at %d differ = %q vs %q", i, x.Tokens[i].Text, y.Tokens[i].Text)
 		}
 		if x.Tokens[i].Offset != y.Tokens[i].Offset {
 			return fmt.Errorf("Token offsets at %d differ = %d vs %d", i, x.Tokens[i].Offset, y.Tokens[i].Offset)

@@ -12,11 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package stringclassifier finds the nearest match between a string and a set
-// of known values. It uses the Levenshtein Distance algorithm to determine
-// this. A confidence percentage is returned, which indicates how confident the
-// algorithm is that the match is correct. The higher the percentage, the
-// greater the confidence that the match is correct.
+// Package stringclassifier finds the nearest match between a string and a set of known values. It
+// uses the Levenshtein Distance (LD) algorithm to determine this. A match with a large LD is less
+// likely to be correct than one with a small LD. A confidence percentage is returned, which
+// indicates how confident the algorithm is that the match is correct. The higher the percentage,
+// the greater the confidence that the match is correct.
 //
 // Example Usage:
 //
@@ -50,11 +50,9 @@ import (
 	"math"
 	"regexp"
 	"sort"
-	"strings"
 	"sync"
 
 	"github.com/google/licenseclassifier/stringclassifier/internal/pq"
-	"github.com/google/licenseclassifier/stringclassifier/internal/sets"
 	"github.com/google/licenseclassifier/stringclassifier/searchset"
 	"github.com/sergi/go-diff/diffmatchpatch"
 )
@@ -62,13 +60,24 @@ import (
 // The diff/match/patch algorithm.
 var dmp = diffmatchpatch.New()
 
-const defaultMinDiffRatio float64 = 0.75
+const (
+	// DefaultConfidenceThreshold is the minimum ratio threshold between
+	// the matching range and the full source range that we're willing to
+	// accept in order to say that the matching range will produce a
+	// sufficiently good edit distance. I.e., if the matching range is
+	// below this threshold we won't run the Levenshtein Distance algorithm
+	// on it.
+	DefaultConfidenceThreshold float64 = 0.80
+
+	defaultMinDiffRatio float64 = 0.75
+)
 
 // A Classifier matches a string to a set of known values.
 type Classifier struct {
 	muValues    sync.RWMutex
 	values      map[string]*knownValue
 	normalizers []NormalizeFunc
+	threshold   float64
 
 	// MinDiffRatio defines the minimum ratio of the length difference
 	// allowed to consider a known value a possible match. This is used as
@@ -90,10 +99,11 @@ type NormalizeFunc func(string) string
 
 // New creates a new Classifier with the provided NormalizeFuncs. Each
 // NormalizeFunc is applied in order to a string before comparison.
-func New(funcs ...NormalizeFunc) *Classifier {
+func New(threshold float64, funcs ...NormalizeFunc) *Classifier {
 	return &Classifier{
 		values:       make(map[string]*knownValue),
 		normalizers:  append([]NormalizeFunc(nil), funcs...),
+		threshold:    threshold,
 		MinDiffRatio: defaultMinDiffRatio,
 	}
 }
@@ -126,7 +136,7 @@ func (c *Classifier) AddPrecomputedValue(key, value string, set *searchset.Searc
 	if _, ok := c.values[key]; ok {
 		return fmt.Errorf("value already registered with key %q", key)
 	}
-	set.ConstructLattice()
+	set.GenerateNodeList()
 	c.values[key] = &knownValue{
 		key:             key,
 		normalizedValue: value,
@@ -225,13 +235,15 @@ func (c *Classifier) NearestMatch(s string) *Match {
 // those areas within the unknown string that are likely to match. A list of
 // potential matches are returned. It's up to the caller to determine which
 // ones are acceptable.
-func (c *Classifier) MultipleMatch(s string) Matches {
+func (c *Classifier) MultipleMatch(s string) (matches Matches) {
 	pq := c.multipleMatch(s)
+	if pq == nil {
+		return matches
+	}
 
 	// A map to remove duplicate entries.
 	m := make(map[Match]bool)
 
-	var matches Matches
 	for pq.Len() != 0 {
 		v := pq.Pop().(*Match)
 		if _, ok := m[*v]; !ok {
@@ -313,58 +325,71 @@ func (c *Classifier) nearestMatch(unknown string) *pq.Queue {
 	return pq
 }
 
+// matcher finds all potential matches of "known" in "unknown". The results are
+// placed in "queue".
+type matcher struct {
+	unknown     *searchset.SearchSet
+	normUnknown string
+	threshold   float64
+
+	mu    sync.Mutex
+	queue *pq.Queue
+}
+
+// newMatcher creates a "matcher" object.
+func newMatcher(unknown string, threshold float64) *matcher {
+	return &matcher{
+		unknown:     searchset.New(unknown, searchset.DefaultGranularity),
+		normUnknown: unknown,
+		threshold:   threshold,
+		queue: pq.NewQueue(func(x, y interface{}) bool {
+			return x.(*Match).Confidence > y.(*Match).Confidence
+		}, nil),
+	}
+}
+
+// findMatches takes a known text and finds all potential instances of it in
+// the unknown text. The resulting matches can then filtered to determine which
+// are the best matches.
+func (m *matcher) findMatches(known *knownValue) {
+	var wg sync.WaitGroup
+	for _, mr := range searchset.FindPotentialMatches(known.set, m.unknown) {
+		if !m.withinConfidenceThreshold(known.set, mr) {
+			continue
+		}
+
+		wg.Add(1)
+		go func(mr searchset.MatchRanges) {
+			start, end := mr.TargetRange(m.unknown)
+			conf := levDist(m.normUnknown[start:end], known.normalizedValue)
+			if conf > 0.0 {
+				m.mu.Lock()
+				m.queue.Push(&Match{Name: known.key, Confidence: conf, Offset: start, Extent: end - start})
+				m.mu.Unlock()
+			}
+			wg.Done()
+		}(mr)
+	}
+	wg.Wait()
+}
+
+// withinConfidenceThreshold returns the Confidence we have in the potential
+// match. It does this by calculating the ratio of what's matching to the
+// original known text.
+func (m *matcher) withinConfidenceThreshold(known *searchset.SearchSet, mr searchset.MatchRanges) bool {
+	return float64(mr.Size())/float64(len(known.Tokens)) >= m.threshold
+}
+
 // multipleMatch returns a Queue of values that might be within the unknown
 // string. The values are compared via their Levenshtein Distance and ranked
 // with the nearest match at the beginning.
 func (c *Classifier) multipleMatch(unknown string) *pq.Queue {
-	var mu sync.Mutex // Protect the priority queue.
-	queue := pq.NewQueue(func(x, y interface{}) bool {
-		return x.(*Match).Confidence > y.(*Match).Confidence
-	}, nil)
-
 	normUnknown := c.normalize(unknown)
 	if normUnknown == "" {
-		return queue
-	}
-	set := searchset.New(normUnknown, searchset.DefaultGranularity)
-
-	const threshold = 1 << 21 // 1MB
-	setSize := set.Size()
-	if setSize > threshold {
-		// The string is simply too big to perform a multi-match. Do a
-		// simple match to see if we can identify something.
-		return c.nearestMatch(normUnknown)
+		return nil
 	}
 
-	var wg sync.WaitGroup
-	classifyString := func(unknown, known *searchset.SearchSet, normUnknown, normKnown, name string) {
-		defer wg.Done()
-
-		if known == nil {
-			known = searchset.New(normKnown, searchset.DefaultGranularity)
-			c.muValues.Lock()
-			c.values[name].set = known
-			c.muValues.Unlock()
-		}
-
-		var indices []int
-		for _, m := range searchset.FindPotentialMatches(known, unknown) {
-			indices = append(indices, m.TargetStart)
-		}
-
-		q := pq.NewQueue(func(x, y interface{}) bool {
-			return x.(*Match).Confidence > y.(*Match).Confidence
-		}, nil)
-
-		c.levenshteinDistances(normUnknown, normKnown, name, indices, q)
-		if q.Len() != 0 {
-			mu.Lock()
-			for q.Len() > 0 {
-				queue.Push(q.Pop().(*Match))
-			}
-			mu.Unlock()
-		}
-	}
+	m := newMatcher(normUnknown, c.threshold)
 
 	c.muValues.RLock()
 	var kvals []*knownValue
@@ -373,63 +398,44 @@ func (c *Classifier) multipleMatch(unknown string) *pq.Queue {
 	}
 	c.muValues.RUnlock()
 
+	var wg sync.WaitGroup
 	wg.Add(len(kvals))
 	for _, known := range kvals {
-		go classifyString(set, known.set, normUnknown, known.normalizedValue, known.key)
+		go func(known *knownValue) {
+			if known.set == nil {
+				k := searchset.New(known.normalizedValue, searchset.DefaultGranularity)
+				c.muValues.Lock()
+				c.values[known.key].set = k
+				c.muValues.Unlock()
+			}
+			m.findMatches(known)
+			wg.Done()
+		}(known)
 	}
 	wg.Wait()
-	return queue
+	return m.queue
 }
 
-// levenshteinDistances searches through the "unknown" text for instances of
-// the "known" text. The matching may not be 100%, so the Levenshtein Distance
-// is calculated for each potential match. A list of candidate offsets are the
-// offsets which have the best chance of matching.
-func (c *Classifier) levenshteinDistances(unknown, known, name string, offsets []int, mpq *pq.Queue) {
+// levDist runs the Levenshtein Distance algorithm on the known and unknown
+// texts to measure how well they match.
+func levDist(unknown, known string) float64 {
 	if len(known) == 0 || len(unknown) == 0 {
 		log.Printf("Zero-sized texts in Levenshtein Distance algorithm: known==%d, unknown==%d", len(known), len(unknown))
-		return
+		return 0.0
 	}
 
-	var muMPQ sync.Mutex
-	var wg sync.WaitGroup
-	wg.Add(len(offsets))
-	for i := 0; i < len(offsets); i++ {
-		go func(offset int) {
-			defer wg.Done()
+	// Calculate the differences between the potentially matching known
+	// text and the unknown text.
+	diffs := dmp.DiffMain(unknown, known, false)
+	end := diffRangeEnd(known, diffs)
 
-			// First, we calculate the range that's most likely to
-			// match from the offset.
-			end := endOfUnknownSubstring(unknown, known, offset)
-			extent := end - offset
-
-			if float64(extent)/float64(len(known)) < c.MinDiffRatio {
-				// The size of the unknown text is too small
-				// relative to the known text.
-				return
-			}
-
-			// Calculate the differences between the potentially
-			// matching known text and the unknown text.
-			diffs := dmp.DiffMain(unknown[offset:end], known, false)
-			end = diffRangeEnd(known, diffs)
-
-			// Now execute the Levenshtein Distance algorithm to
-			// see how much it does match.
-			distance := dmp.DiffLevenshtein(diffs[:end])
-			confidence := confidencePercentage(unknownTextLength(unknown, diffs), len(known), distance)
-			if confidence > 0.0 {
-				muMPQ.Lock()
-				mpq.Push(&Match{Name: name, Confidence: confidence, Offset: offset, Extent: extent})
-				muMPQ.Unlock()
-			}
-		}(offsets[i])
-	}
-	wg.Wait()
+	// Now execute the Levenshtein Distance algorithm to see how much it
+	// does match.
+	distance := dmp.DiffLevenshtein(diffs[:end])
+	return confidencePercentage(unknownTextLength(unknown, diffs), len(known), distance)
 }
 
-// unknownTextLength returns the length of the unknown text based on the diff
-// range.
+// unknownTextLength returns the length of the unknown text based on the diff range.
 func unknownTextLength(unknown string, diffs []diffmatchpatch.Diff) int {
 	last := len(diffs) - 1
 	for ; last >= 0; last-- {
@@ -445,32 +451,6 @@ func unknownTextLength(unknown string, diffs []diffmatchpatch.Diff) int {
 		}
 	}
 	return ulen
-}
-
-// endOfUnknownSubstring returns the end point of the substring within the
-// unknown text that is likely to match the known value.
-func endOfUnknownSubstring(unknown, known string, offset int) (end int) {
-	klen := len(known)
-	if len(unknown[offset:]) > klen {
-		// If the unknown text is longer than the known text, we want
-		// to make sure we don't skip any text within the unknown bit
-		// that could match. So go backwards through the known text and
-		// find a common suffix between the known and unknown.
-		for i := 1; i < klen; i++ {
-			if strings.HasPrefix(unknown[offset+klen:], known[klen-i-1:]) {
-				end = klen + i + 1 + offset
-				break
-			}
-		}
-	}
-	if end == 0 {
-		// We couldn't find a common suffix or the known text was
-		// longer than the unknown text.  Therefore, we just stop
-		// either at the end of the unknown text or after the length of
-		// the known text from the offset.
-		end = min(len(unknown[offset:]), klen) + offset
-	}
-	return end
 }
 
 // diffRangeEnd returns the end index for the "Diff" objects that constructs
@@ -493,34 +473,6 @@ func diffRangeEnd(known string, diffs []diffmatchpatch.Diff) (end int) {
 		}
 	}
 	return end
-}
-
-// findStartingIndices returns the indices into the "unknown" text which give
-// the best bet on where to start calculating the Levenshtein Distance.
-func findStartingIndices(known, unknown string) []int {
-	klen, ulen := len(known), len(unknown)
-	if klen > ulen {
-		return []int{0}
-	}
-
-	// There may be several similar matching texts within the unknown text.
-	// Gather them all and let the Levenshtein Distance calculation decide
-	// which is the best match.
-	indices := sets.NewIntSet()
-	for klen > 4 {
-		for start := 0; start < len(unknown); {
-			i := strings.Index(unknown[start:], known[:klen])
-			if i == -1 {
-				break
-			}
-			if !indices.Contains(start + i) {
-				indices.Insert(start + i)
-			}
-			start += i + klen
-		}
-		klen /= 2
-	}
-	return indices.Sorted()
 }
 
 // confidencePercentage calculates how confident we are in the result of the

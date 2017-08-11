@@ -14,12 +14,10 @@
 package searchset
 
 import (
-	"bytes"
-	"io/ioutil"
-	"os"
-	"path/filepath"
 	"reflect"
 	"testing"
+
+	"github.com/google/licenseclassifier/stringclassifier/searchset/tokenizer"
 )
 
 const (
@@ -32,170 +30,63 @@ again in Ulysses, although in a more neomodern sense.
 `
 )
 
-var parent = map[string]map[string]present{
-	"[0:14]":  {"[0:7]": present{}, "[3:10]": present{}, "[6:13]": present{}},
-	"[0:7]":   {"[0:4]": present{}, "[2:6]": present{}},
-	"[3:10]":  {"[4:8]": present{}, "[6:10]": present{}},
-	"[6:13]":  {"[6:10]": present{}, "[8:12]": present{}},
-	"[0:4]":   {"[0:3]": present{}, "[1:4]": present{}},
-	"[2:6]":   {"[2:5]": present{}, "[3:6]": present{}},
-	"[4:8]":   {"[4:7]": present{}, "[5:8]": present{}},
-	"[6:10]":  {"[6:9]": present{}, "[7:10]": present{}},
-	"[8:12]":  {"[8:11]": present{}, "[9:12]": present{}},
-	"[10:14]": {"[10:13]": present{}, "[11:14]": present{}},
-	"[0:3]":   {},
-	"[1:4]":   {},
-	"[2:5]":   {},
-	"[3:6]":   {},
-	"[4:7]":   {},
-	"[5:8]":   {},
-	"[6:9]":   {},
-	"[7:10]":  {},
-	"[8:11]":  {},
-	"[9:12]":  {},
-	"[10:13]": {},
-	"[11:14]": {},
-}
-
-func TestSearchSet_LatticeConstruction(t *testing.T) {
-	s := New(shortPostmodernThesis, DefaultGranularity)
-	want := "[0:14] :: " +
-		"[0:7] -> [3:10] -> [6:13] :: " +
-		"[0:4] -> [2:6] -> [4:8] -> [6:10] -> [8:12] -> [10:14] :: " +
-		"[0:3] -> [1:4] -> [2:5] -> [3:6] -> [4:7] -> [5:8] -> [6:9] -> [7:10] -> [8:11] -> [9:12] -> [10:13] -> [11:14]"
-	if got := s.lattice.String(); got != want {
-		t.Errorf("Lattice = got:\n%s\nwant:\n%s", got, want)
-	}
-
-	for n := s.lattice.root; n != nil; n = n.sibling {
-		pnode := n.String()
-		if _, ok := parent[pnode]; !ok {
-			t.Errorf("LatticeNode(%q) = cannot find in parent list", pnode)
-			continue
-		}
-		if got, want := len(n.children), len(parent[pnode]); got != want {
-			t.Errorf("LatticeNode(%q) = %d number of children, want %d", pnode, got, want)
-			continue
-		}
-		for child := range n.children {
-			cnode := child.String()
-			if _, ok := parent[pnode][cnode]; !ok {
-				t.Errorf("LatticeNode(%q) = cannot find child node %q", pnode, cnode)
-			}
-		}
-	}
-}
-
-func TestSearchSet_MarkChildrenVisited(t *testing.T) {
-	s := New(shortPostmodernThesis, DefaultGranularity)
-	visited := make(map[*node]present)
-	s.lattice.root.markChildrenVisited(visited)
-	for n := s.lattice.root.sibling; n != nil; n = n.sibling {
-		r := n.String()
-		// Not all nodes will be visited. Only those that are children
-		// to the parent nodes.
-		if _, ok := visited[n]; !ok && r != "[10:14]" && r != "[10:13]" && r != "[11:14]" {
-			t.Errorf("MarkChildrenVisited = node [%d:%d] not visited", n.tokens.Start, n.tokens.End)
-		}
-	}
-}
-
-func TestSearchSet_Tokenize(t *testing.T) {
+func TestSearchSet_New(t *testing.T) {
 	tests := []struct {
-		text string
-		want tokens
+		description string
+		text        string
+		granularity int
+		want        *SearchSet
 	}{
 		{
-			text: "Tokenize",
-			want: tokens{&token{Token: "Tokenize", Offset: 0}},
-		},
-		{
-			text: "Hello world",
-			want: tokens{
-				&token{Token: "Hello", Offset: 0},
-				&token{Token: "world", Offset: 6},
+			description: "Empty string",
+			text:        "",
+			granularity: DefaultGranularity,
+			want: &SearchSet{
+				Tokens:         nil,
+				Hashes:         make(tokenizer.Hash),
+				Checksums:      nil,
+				ChecksumRanges: nil,
 			},
 		},
 		{
-			text: `Goodnight,
-Irene
-`,
-			want: tokens{
-				&token{Token: "Goodnight", Offset: 0},
-				&token{Token: ",", Offset: 9},
-				&token{Token: "Irene", Offset: 11},
-			},
-		},
-		{
-			text: "Copyright © 2017 Yoyodyne, Inc.",
-			want: tokens{
-				&token{Token: "Copyright", Offset: 0},
-				&token{Token: "©", Offset: 10},
-				&token{Token: "2017", Offset: 12},
-				&token{Token: "Yoyodyne", Offset: 17},
-				&token{Token: ",", Offset: 25},
-				&token{Token: "Inc", Offset: 27},
-				&token{Token: ".", Offset: 30},
+			description: "Small string",
+			text:        "Hello world",
+			granularity: 4,
+			want: &SearchSet{
+				Tokens: tokenizer.Tokens{
+					{Text: "Hello", Offset: 0},
+					{Text: "world", Offset: 6},
+				},
+				Hashes:         tokenizer.Hash{2346098258: tokenizer.TokenRanges{{Start: 0, End: 2}}},
+				Checksums:      []uint32{2346098258},
+				ChecksumRanges: tokenizer.TokenRanges{{Start: 0, End: 2}},
+				nodes:          []*node{{2346098258, &tokenizer.TokenRange{Start: 0, End: 2}}},
 			},
 		},
 	}
 
 	for _, tt := range tests {
-		if got := tokenize(tt.text); !reflect.DeepEqual(got, tt.want) {
-			t.Errorf("Tokenize(%q) = %+v, want %+v", tt.text, got, tt.want)
+		if got := New(tt.text, tt.granularity); !reflect.DeepEqual(got, tt.want) {
+			t.Errorf("New(%q) = %+v, want %+v", tt.description, got, tt.want)
 		}
 	}
 }
 
-func TestSearchSet_GenerateHashes(t *testing.T) {
-	tests := []struct {
-		text       string
-		sizeFactor int
-		wantHash   []uint32
-		wantRanges TokenRanges
-	}{
-		{
-			text:       "",
-			sizeFactor: 1,
-			wantHash:   []uint32{0},
-			wantRanges: TokenRanges{{Start: 0, End: 0}},
-		},
-		{
-			text:       "Hashes",
-			sizeFactor: 1,
-			wantHash:   []uint32{408116689},
-			wantRanges: TokenRanges{{Start: 0, End: 1}},
-		},
-		{
-			text:       "hello world",
-			sizeFactor: 1,
-			wantHash:   []uint32{222957957},
-			wantRanges: TokenRanges{{Start: 0, End: 2}},
-		},
-		{
-			text:       "Copyright © 2017 Yoyodyne, Inc.",
-			sizeFactor: 3,
-			wantHash:   []uint32{2473816729, 966085113, 3025678301, 3199087486, 850352802, 1274745089},
-			wantRanges: TokenRanges{
-				{Start: 0, End: 2},
-				{Start: 1, End: 3},
-				{Start: 2, End: 4},
-				{Start: 3, End: 5},
-				{Start: 4, End: 6},
-				{Start: 5, End: 7},
-			},
-		},
+func TestSearchSet_NodeConstruction(t *testing.T) {
+	s := New(shortPostmodernThesis, DefaultGranularity)
+	want := []string{
+		"[0:3]", "[1:4]", "[2:5]", "[3:6]", "[4:7]", "[5:8]", "[6:9]",
+		"[7:10]", "[8:11]", "[9:12]", "[10:13]", "[11:14]",
 	}
 
-	for _, tt := range tests {
-		hash := make(hash)
-		toks := tokenize(tt.text)
-		h, tr := toks.generateHashes(hash, len(toks)/tt.sizeFactor)
-		if !reflect.DeepEqual(h, tt.wantHash) {
-			t.Errorf("GenerateHashes(hash) = %v, want %v", h, tt.wantHash)
-		}
-		if !reflect.DeepEqual(tr, tt.wantRanges) {
-			t.Errorf("GenerateHashes(ranges) = %v, want %v", tr, tt.wantRanges)
+	if len(s.nodes) != len(want) {
+		t.Errorf("Number of nodes %v, want %v", len(s.nodes), len(want))
+		return
+	}
+
+	for i := 0; i < len(s.nodes); i++ {
+		if got := s.nodes[i].String(); got != want[i] {
+			t.Errorf("Nodes = got:\n%s\nwant:\n%s", got, want[i])
 		}
 	}
 }
@@ -203,162 +94,80 @@ func TestSearchSet_GenerateHashes(t *testing.T) {
 func TestSearchSet_CoalesceTokenRanges(t *testing.T) {
 	tests := []struct {
 		description string
-		tr          TokenRanges
-		sr          func(TokenRanges) map[*TokenRange]TokenRanges
-		want        TokenRanges
+		mr          MatchRanges
+		want        MatchRanges
 	}{
 		{
 			description: "Non-overlapping Ranges",
-			tr: TokenRanges{
-				{Start: 0, End: 27},
-				{Start: 37, End: 927},
+			mr: MatchRanges{
+				{SrcStart: 0, SrcEnd: 27, TargetStart: 0, TargetEnd: 27},
+				{SrcStart: 37, SrcEnd: 927, TargetStart: 37, TargetEnd: 927},
 			},
-			sr: func(TokenRanges) map[*TokenRange]TokenRanges {
-				return make(map[*TokenRange]TokenRanges)
-			},
-			want: TokenRanges{
-				{Start: 0, End: 27},
-				{Start: 37, End: 927},
+			want: MatchRanges{
+				{SrcStart: 0, SrcEnd: 27, TargetStart: 0, TargetEnd: 27},
+				{SrcStart: 37, SrcEnd: 927, TargetStart: 37, TargetEnd: 927},
 			},
 		},
 		{
 			description: "Identical Ranges",
-			tr: TokenRanges{
-				{Start: 0, End: 37},
-				{Start: 0, End: 37},
+			mr: MatchRanges{
+				{SrcStart: 0, SrcEnd: 37, TargetStart: 0, TargetEnd: 37},
+				{SrcStart: 0, SrcEnd: 37, TargetStart: 0, TargetEnd: 37},
 			},
-			sr: func(TokenRanges) map[*TokenRange]TokenRanges {
-				return make(map[*TokenRange]TokenRanges)
-			},
-			want: TokenRanges{{Start: 0, End: 37}},
+			want: MatchRanges{{SrcStart: 0, SrcEnd: 37, TargetStart: 0, TargetEnd: 37}},
 		},
 		{
 			description: "Sequential Ranges",
-			tr: TokenRanges{
-				{Start: 0, End: 37},
-				{Start: 37, End: 927},
+			mr: MatchRanges{
+				{SrcStart: 0, SrcEnd: 37, TargetStart: 0, TargetEnd: 37},
+				{SrcStart: 37, SrcEnd: 927, TargetStart: 37, TargetEnd: 927},
 			},
-			sr: func(tr TokenRanges) map[*TokenRange]TokenRanges {
-				sr := make(map[*TokenRange]TokenRanges)
-				sr[tr[0]] = TokenRanges{{Start: 0, End: 37}}
-				sr[tr[1]] = TokenRanges{{Start: 37, End: 927}}
-				return sr
-			},
-			want: TokenRanges{{Start: 0, End: 927}},
-		},
-		{
-			description: "Non-Sequential Ranges",
-			tr: TokenRanges{
-				{Start: 0, End: 37},
-				{Start: 37, End: 927},
-			},
-			sr: func(tr TokenRanges) map[*TokenRange]TokenRanges {
-				sr := make(map[*TokenRange]TokenRanges)
-				sr[tr[0]] = TokenRanges{{Start: 0, End: 37}}
-				sr[tr[1]] = TokenRanges{{Start: 127, End: 927}}
-				return sr
-			},
-			want: TokenRanges{
-				{Start: 0, End: 37},
-				{Start: 37, End: 927},
-			},
+			want: MatchRanges{{SrcStart: 0, SrcEnd: 927, TargetStart: 0, TargetEnd: 927}},
 		},
 		{
 			description: "Overlapping Ranges - Same Start",
-			tr: TokenRanges{
-				{Start: 0, End: 37},
-				{Start: 0, End: 927},
+			mr: MatchRanges{
+				{SrcStart: 0, SrcEnd: 37, TargetStart: 0, TargetEnd: 37},
+				{SrcStart: 0, SrcEnd: 927, TargetStart: 0, TargetEnd: 927},
 			},
-			sr: func(TokenRanges) map[*TokenRange]TokenRanges {
-				return make(map[*TokenRange]TokenRanges)
-			},
-			want: TokenRanges{{Start: 0, End: 927}},
+			want: MatchRanges{{SrcStart: 0, SrcEnd: 927, TargetStart: 0, TargetEnd: 927}},
 		},
 		{
 			description: "Overlapping Ranges - Different Start",
-			tr: TokenRanges{
-				{Start: 0, End: 37},
-				{Start: 27, End: 927},
+			mr: MatchRanges{
+				{SrcStart: 0, SrcEnd: 37, TargetStart: 0, TargetEnd: 37},
+				{SrcStart: 27, SrcEnd: 927, TargetStart: 27, TargetEnd: 927},
 			},
-			sr: func(TokenRanges) map[*TokenRange]TokenRanges {
-				return make(map[*TokenRange]TokenRanges)
-			},
-			want: TokenRanges{{Start: 0, End: 927}},
+			want: MatchRanges{{SrcStart: 0, SrcEnd: 927, TargetStart: 0, TargetEnd: 927}},
 		},
 		{
 			description: "Overlapping Ranges - Same End",
-			tr: TokenRanges{
-				{Start: 0, End: 37},
-				{Start: 27, End: 37},
+			mr: MatchRanges{
+				{SrcStart: 0, SrcEnd: 37, TargetStart: 0, TargetEnd: 37},
+				{SrcStart: 27, SrcEnd: 37, TargetStart: 27, TargetEnd: 37},
 			},
-			sr: func(TokenRanges) map[*TokenRange]TokenRanges {
-				return make(map[*TokenRange]TokenRanges)
-			},
-			want: TokenRanges{{Start: 0, End: 37}},
+			want: MatchRanges{{SrcStart: 0, SrcEnd: 37, TargetStart: 0, TargetEnd: 37}},
 		},
 		{
 			description: "Completely Overlapping Ranges",
-			tr: TokenRanges{
-				{Start: 0, End: 42},
-				{Start: 27, End: 37},
+			mr: MatchRanges{
+				{SrcStart: 0, SrcEnd: 42, TargetStart: 0, TargetEnd: 42},
+				{SrcStart: 27, SrcEnd: 37, TargetStart: 27, TargetEnd: 37},
 			},
-			sr: func(TokenRanges) map[*TokenRange]TokenRanges {
-				return make(map[*TokenRange]TokenRanges)
-			},
-			want: TokenRanges{{Start: 0, End: 42}},
+			want: MatchRanges{{SrcStart: 0, SrcEnd: 42, TargetStart: 0, TargetEnd: 42}},
 		},
 	}
 
 	for _, tt := range tests {
-		got := coalesceTokenRanges(tt.tr, tt.sr(tt.tr))
+		got := coalesceMatchRanges(tt.mr)
 		if !reflect.DeepEqual(got, tt.want) {
 			t.Errorf("CoalesceTokenRanges(%q) = %+v, want %+v", tt.description, got, tt.want)
 		}
 	}
 }
 
-// readFile locates and reads the data file.
-func readFile(filename, dir string) ([]byte, error) {
-	for _, path := range filepath.SplitList(os.Getenv("GOPATH")) {
-		archive := filepath.Join(path, dir, filename)
-		if _, err := os.Stat(archive); err != nil {
-			if os.IsNotExist(err) {
-				continue
-			}
-			return nil, err
-		}
-
-		return ioutil.ReadFile(archive)
-	}
-	return nil, nil
-}
-
 func TestSearchSet_FindPotentialMatches(t *testing.T) {
-	postmodernThesisGOB, err := readFile("postmodern_thesis.gob", "src/github.com/google/licenseclassifier/stringclassifier/searchset/testdata")
-	if err != nil {
-		t.Fatalf("Cannot read postmodern thesis GOB file: %v", err)
-	}
-
-	r := bytes.NewReader(postmodernThesisGOB)
-	var known SearchSet
-	if err := Deserialize(r, &known); err != nil {
-		t.Fatalf("Deserialization: cannot deserialize set: %v", err)
-	}
-
-	w := "[0:46] :: " +
-		"[0:23] -> [11:34] -> [22:45] :: " +
-		"[0:15] -> [7:22] -> [14:29] -> [21:36] -> [28:43] :: " +
-		"[0:11] -> [5:16] -> [10:21] -> [15:26] -> [20:31] -> [25:36] -> [30:41] -> [35:46] :: " +
-		"[0:9] -> [4:13] -> [8:17] -> [12:21] -> [16:25] -> [20:29] -> [24:33] -> [28:37] -> [32:41] -> [36:45] :: " +
-		"[0:7] -> [3:10] -> [6:13] -> [9:16] -> [12:19] -> [15:22] -> [18:25] -> [21:28] -> [24:31] -> [27:34] -> [30:37] -> [33:40] -> [36:43] -> [39:46] :: " +
-		"[0:6] -> [3:9] -> [6:12] -> [9:15] -> [12:18] -> [15:21] -> [18:24] -> [21:27] -> [24:30] -> [27:33] -> [30:36] -> [33:39] -> [36:42] -> [39:45] :: " +
-		"[0:5] -> [2:7] -> [4:9] -> [6:11] -> [8:13] -> [10:15] -> [12:17] -> [14:19] -> [16:21] -> [18:23] -> [20:25] -> [22:27] -> [24:29] -> [26:31] -> [28:33] -> [30:35] -> [32:37] -> [34:39] -> [36:41] -> [38:43] -> [40:45] :: " +
-		"[0:4] -> [2:6] -> [4:8] -> [6:10] -> [8:12] -> [10:14] -> [12:16] -> [14:18] -> [16:20] -> [18:22] -> [20:24] -> [22:26] -> [24:28] -> [26:30] -> [28:32] -> [30:34] -> [32:36] -> [34:38] -> [36:40] -> [38:42] -> [40:44] -> [42:46] :: " +
-		"[0:3] -> [1:4] -> [2:5] -> [3:6] -> [4:7] -> [5:8] -> [6:9] -> [7:10] -> [8:11] -> [9:12] -> [10:13] -> [11:14] -> [12:15] -> [13:16] -> [14:17] -> [15:18] -> [16:19] -> [17:20] -> [18:21] -> [19:22] -> [20:23] -> [21:24] -> [22:25] -> [23:26] -> [24:27] -> [25:28] -> [26:29] -> [27:30] -> [28:31] -> [29:32] -> [30:33] -> [31:34] -> [32:35] -> [33:36] -> [34:37] -> [35:38] -> [36:39] -> [37:40] -> [38:41] -> [39:42] -> [40:43] -> [41:44] -> [42:45] -> [43:46]"
-
-	if got := known.lattice.String(); got != w {
-		t.Errorf("LatticeMismatch(known) = %s\nwant:\n%s", got, w)
-	}
+	known := New(postmodernThesis, DefaultGranularity)
 
 	size := len(postmodernThesis)
 	modified := "hello world "
@@ -367,8 +176,13 @@ func TestSearchSet_FindPotentialMatches(t *testing.T) {
 	modified += postmodernThesis[2*size/3+7:]
 	unknown := New(modified, DefaultGranularity)
 
-	want := []MatchRange{{SrcStart: 0, SrcEnd: 247, TargetStart: 12, TargetEnd: 261}}
-	got := FindPotentialMatches(&known, unknown)
+	want := []MatchRanges{{
+		{SrcStart: 0, SrcEnd: 15, TargetStart: 2, TargetEnd: 17},
+		{SrcStart: 16, SrcEnd: 28, TargetStart: 21, TargetEnd: 33},
+		{SrcStart: 31, SrcEnd: 46, TargetStart: 34, TargetEnd: 49},
+	}}
+
+	got := FindPotentialMatches(known, unknown)
 	if len(got) != len(want) {
 		t.Errorf("Number of matches %v, want %v", len(got), len(want))
 	}
@@ -376,12 +190,19 @@ func TestSearchSet_FindPotentialMatches(t *testing.T) {
 		t.Errorf("Offsets = %+v, want %+v", got, want)
 	}
 
-	known = *New(`again in Ulysses, although in a more neomodern sense.
+	known = New(`again in Ulysses, although in a more neomodern sense.
 culture. The without/within distinction intrinsic to Finnegan's Wake emerges
 `, DefaultGranularity)
 
-	want = []MatchRange{{SrcStart: 0, SrcEnd: 53, TargetStart: 208, TargetEnd: 261}}
-	got = FindPotentialMatches(&known, unknown)
+	want = []MatchRanges{
+		{
+			{SrcStart: 11, SrcEnd: 18, TargetStart: 26, TargetEnd: 33},
+			{SrcStart: 21, SrcEnd: 25, TargetStart: 34, TargetEnd: 38},
+		},
+		{{SrcStart: 0, SrcEnd: 11, TargetStart: 38, TargetEnd: 49}},
+	}
+
+	got = FindPotentialMatches(known, unknown)
 	if len(got) != len(want) {
 		t.Errorf("Number of matches %v, want %v", len(got), len(want))
 	}
@@ -390,78 +211,363 @@ culture. The without/within distinction intrinsic to Finnegan's Wake emerges
 	}
 }
 
-func TestSearchSet_CombineUnique(t *testing.T) {
+func TestSearchSet_GetMatchedRanges(t *testing.T) {
+	const (
+		source = "a b c d e f g c d e h i j"
+		target = "a b c _ _ c d e _ f g h _ c d  e _ h i j"
+	)
+
+	src := New(source, DefaultGranularity)
+	tar := New(target, DefaultGranularity)
+
+	want := []MatchRanges{
+		{
+			{SrcStart: 0, SrcEnd: 3, TargetStart: 0, TargetEnd: 3},
+			{SrcStart: 2, SrcEnd: 5, TargetStart: 5, TargetEnd: 8},
+			{SrcStart: 7, SrcEnd: 10, TargetStart: 13, TargetEnd: 16},
+			{SrcStart: 10, SrcEnd: 13, TargetStart: 17, TargetEnd: 20},
+		},
+	}
+
+	got := getMatchedRanges(src, tar)
+	if len(got) != len(want) {
+		t.Errorf("Number of matches %v, want %v", len(got), len(want))
+	}
+	if !reflect.DeepEqual(got, want) {
+		t.Errorf("Match Ranges = %+v, want %+v", got, want)
+	}
+}
+
+func TestSearchSet_TargetMatchedRanges(t *testing.T) {
+	const (
+		source = "a b c d e f g c d e h i j"
+		target = "a b c d e _ _ c d e _ f g h _ c d  e _ h i j"
+	)
+
+	src := New(source, DefaultGranularity)
+	tar := New(target, DefaultGranularity)
+
+	want := MatchRanges{
+		{SrcStart: 0, SrcEnd: 3, TargetStart: 0, TargetEnd: 3},
+		{SrcStart: 1, SrcEnd: 4, TargetStart: 1, TargetEnd: 4},
+		{SrcStart: 2, SrcEnd: 5, TargetStart: 2, TargetEnd: 5},
+		{SrcStart: 7, SrcEnd: 10, TargetStart: 2, TargetEnd: 5},
+		{SrcStart: 2, SrcEnd: 5, TargetStart: 7, TargetEnd: 10},
+		{SrcStart: 7, SrcEnd: 10, TargetStart: 7, TargetEnd: 10},
+		{SrcStart: 2, SrcEnd: 5, TargetStart: 15, TargetEnd: 18},
+		{SrcStart: 7, SrcEnd: 10, TargetStart: 15, TargetEnd: 18},
+		{SrcStart: 10, SrcEnd: 13, TargetStart: 19, TargetEnd: 22},
+	}
+
+	got := targetMatchedRanges(src, tar)
+	if len(got) != len(want) {
+		t.Errorf("Number of matches %v, want %v", len(got), len(want))
+	}
+	if !reflect.DeepEqual(got, want) {
+		t.Errorf("Match Range = %+v, want %+v", got, want)
+	}
+}
+
+func TestSearchSet_UntangleSourceRanges(t *testing.T) {
 	tests := []struct {
 		description string
-		this        TokenRanges
-		that        TokenRanges
-		want        func(this, that TokenRanges) TokenRanges
+		mr          MatchRanges
+		want        MatchRanges
 	}{
 		{
-			description: "Nil Range",
-			this:        TokenRanges{{Start: 0, End: 37}},
-			that:        nil,
-			want: func(this, that TokenRanges) TokenRanges {
-				return this
+			description: "Single Match - In Order",
+			mr: MatchRanges{
+				{SrcStart: 0, SrcEnd: 3, TargetStart: 10, TargetEnd: 13},
+				{SrcStart: 5, SrcEnd: 10, TargetStart: 14, TargetEnd: 19},
+				{SrcStart: 6, SrcEnd: 11, TargetStart: 15, TargetEnd: 20},
+			},
+			want: MatchRanges{
+				{SrcStart: 0, SrcEnd: 3, TargetStart: 10, TargetEnd: 13},
+				{SrcStart: 5, SrcEnd: 10, TargetStart: 14, TargetEnd: 19},
+				{SrcStart: 6, SrcEnd: 11, TargetStart: 15, TargetEnd: 20},
 			},
 		},
 		{
-			description: "Empty Range",
-			this:        TokenRanges{},
-			that:        TokenRanges{{Start: 0, End: 37}},
-			want: func(this, that TokenRanges) TokenRanges {
-				return that
+			description: "Single Match - Out of Order",
+			mr: MatchRanges{
+				{SrcStart: 0, SrcEnd: 3, TargetStart: 10, TargetEnd: 13},
+				{SrcStart: 5, SrcEnd: 10, TargetStart: 14, TargetEnd: 19},
+				{SrcStart: 15, SrcEnd: 20, TargetStart: 14, TargetEnd: 19},
+				{SrcStart: 6, SrcEnd: 11, TargetStart: 15, TargetEnd: 20},
+				{SrcStart: 5, SrcEnd: 10, TargetStart: 24, TargetEnd: 19},
+				{SrcStart: 15, SrcEnd: 20, TargetStart: 24, TargetEnd: 19},
+				{SrcStart: 23, SrcEnd: 29, TargetStart: 30, TargetEnd: 37},
+			},
+			want: MatchRanges{
+				{SrcStart: 0, SrcEnd: 3, TargetStart: 10, TargetEnd: 13},
+				{SrcStart: 5, SrcEnd: 10, TargetStart: 14, TargetEnd: 19},
+				{SrcStart: 6, SrcEnd: 11, TargetStart: 15, TargetEnd: 20},
+				{SrcStart: 15, SrcEnd: 20, TargetStart: 24, TargetEnd: 19},
+				{SrcStart: 23, SrcEnd: 29, TargetStart: 30, TargetEnd: 37},
 			},
 		},
 		{
-			description: "Disjoint Ranges",
-			this:        TokenRanges{{Start: 0, End: 37}},
-			that:        TokenRanges{{Start: 42, End: 927}},
-			want: func(this, that TokenRanges) TokenRanges {
-				return append(this, that...)
+			description: "Multiple Match - In Order",
+			mr: MatchRanges{
+				{SrcStart: 0, SrcEnd: 3, TargetStart: 10, TargetEnd: 13},
+				{SrcStart: 5, SrcEnd: 10, TargetStart: 14, TargetEnd: 19},
+				{SrcStart: 6, SrcEnd: 11, TargetStart: 15, TargetEnd: 20},
+				{SrcStart: 0, SrcEnd: 3, TargetStart: 110, TargetEnd: 113},
+				{SrcStart: 5, SrcEnd: 10, TargetStart: 114, TargetEnd: 119},
+				{SrcStart: 6, SrcEnd: 11, TargetStart: 115, TargetEnd: 120},
+			},
+			want: MatchRanges{
+				{SrcStart: 0, SrcEnd: 3, TargetStart: 10, TargetEnd: 13},
+				{SrcStart: 5, SrcEnd: 10, TargetStart: 14, TargetEnd: 19},
+				{SrcStart: 6, SrcEnd: 11, TargetStart: 15, TargetEnd: 20},
+				{SrcStart: 0, SrcEnd: 3, TargetStart: 110, TargetEnd: 113},
+				{SrcStart: 5, SrcEnd: 10, TargetStart: 114, TargetEnd: 119},
+				{SrcStart: 6, SrcEnd: 11, TargetStart: 115, TargetEnd: 120},
 			},
 		},
 		{
-			description: "Equal Ranges",
-			this:        TokenRanges{{Start: 0, End: 37}},
-			that:        TokenRanges{{Start: 0, End: 37}},
-			want: func(this, _ TokenRanges) TokenRanges {
-				return this
+			description: "Multiple Match - Out of Order",
+			mr: MatchRanges{
+				{SrcStart: 0, SrcEnd: 3, TargetStart: 10, TargetEnd: 13},
+				{SrcStart: 5, SrcEnd: 10, TargetStart: 14, TargetEnd: 19},
+				{SrcStart: 15, SrcEnd: 20, TargetStart: 14, TargetEnd: 19},
+				{SrcStart: 6, SrcEnd: 11, TargetStart: 15, TargetEnd: 20},
+				{SrcStart: 5, SrcEnd: 10, TargetStart: 24, TargetEnd: 19},
+				{SrcStart: 15, SrcEnd: 20, TargetStart: 24, TargetEnd: 19},
+				{SrcStart: 23, SrcEnd: 29, TargetStart: 30, TargetEnd: 37},
+				{SrcStart: 0, SrcEnd: 3, TargetStart: 110, TargetEnd: 113},
+				{SrcStart: 5, SrcEnd: 10, TargetStart: 114, TargetEnd: 119},
+				{SrcStart: 15, SrcEnd: 20, TargetStart: 114, TargetEnd: 119},
+				{SrcStart: 6, SrcEnd: 11, TargetStart: 115, TargetEnd: 120},
+				{SrcStart: 5, SrcEnd: 10, TargetStart: 124, TargetEnd: 119},
+				{SrcStart: 15, SrcEnd: 20, TargetStart: 124, TargetEnd: 119},
+				{SrcStart: 23, SrcEnd: 29, TargetStart: 130, TargetEnd: 137},
 			},
-		},
-		{
-			description: "Overlapping Ranges",
-			this: TokenRanges{
-				{Start: 27, End: 42},
-				{Start: 0, End: 37},
-				{Start: 3, End: 13},
-				{Start: 27, End: 42},
-			},
-			that: TokenRanges{
-				{Start: 927, End: 1024},
-				{Start: 27, End: 42},
-			},
-			want: func(_, _ TokenRanges) TokenRanges {
-				return TokenRanges{
-					{Start: 0, End: 37},
-					{Start: 3, End: 13},
-					{Start: 27, End: 42},
-					{Start: 927, End: 1024},
-				}
+			want: MatchRanges{
+				{SrcStart: 0, SrcEnd: 3, TargetStart: 10, TargetEnd: 13},
+				{SrcStart: 5, SrcEnd: 10, TargetStart: 14, TargetEnd: 19},
+				{SrcStart: 6, SrcEnd: 11, TargetStart: 15, TargetEnd: 20},
+				{SrcStart: 15, SrcEnd: 20, TargetStart: 24, TargetEnd: 19},
+				{SrcStart: 23, SrcEnd: 29, TargetStart: 30, TargetEnd: 37},
+				{SrcStart: 0, SrcEnd: 3, TargetStart: 110, TargetEnd: 113},
+				{SrcStart: 5, SrcEnd: 10, TargetStart: 114, TargetEnd: 119},
+				{SrcStart: 6, SrcEnd: 11, TargetStart: 115, TargetEnd: 120},
+				{SrcStart: 15, SrcEnd: 20, TargetStart: 124, TargetEnd: 119},
+				{SrcStart: 23, SrcEnd: 29, TargetStart: 130, TargetEnd: 137},
 			},
 		},
 	}
 
 	for _, tt := range tests {
-		got, want := tt.this.combineUnique(tt.that), tt.want(tt.this, tt.that)
-		if len(got) != len(want) {
-			t.Errorf("CombineUnique(%q) = length %v, want length %v", tt.description, len(got), len(want))
-			continue
+		got := untangleSourceRanges(tt.mr)
+		if len(got) != len(tt.want) {
+			t.Errorf("Number of matches %v, want %v", len(got), len(tt.want))
 		}
-		for i := 0; i < len(got); i++ {
-			if !reflect.DeepEqual(got[i], want[i]) {
-				t.Errorf("CombineUnique(%q) = position %d, %+v, want %+v", tt.description, i, got[i], want[i])
-			}
+		if !reflect.DeepEqual(got, tt.want) {
+			t.Errorf("UntangleSourceRanges(%q) = %v, want %v", tt.description, got, tt.want)
+		}
+	}
+}
+
+func TestSearchSet_SplitRanges(t *testing.T) {
+	tests := []struct {
+		description string
+		mr          MatchRanges
+		want        []MatchRanges
+	}{
+		{
+			description: "Single Match Range",
+			mr: MatchRanges{
+				{SrcStart: 0, SrcEnd: 10, TargetStart: 5, TargetEnd: 15},
+				{SrcStart: 20, SrcEnd: 30, TargetStart: 25, TargetEnd: 35},
+			},
+			want: []MatchRanges{
+				{
+					{SrcStart: 0, SrcEnd: 10, TargetStart: 5, TargetEnd: 15},
+					{SrcStart: 20, SrcEnd: 30, TargetStart: 25, TargetEnd: 35},
+				},
+			},
+		},
+		{
+			description: "Two Match Ranges",
+			mr: MatchRanges{
+				{SrcStart: 0, SrcEnd: 10, TargetStart: 5, TargetEnd: 15},
+				{SrcStart: 20, SrcEnd: 30, TargetStart: 25, TargetEnd: 35},
+				{SrcStart: 3, SrcEnd: 10, TargetStart: 108, TargetEnd: 115},
+				{SrcStart: 23, SrcEnd: 30, TargetStart: 25, TargetEnd: 35},
+			},
+			want: []MatchRanges{
+				{
+					{SrcStart: 0, SrcEnd: 10, TargetStart: 5, TargetEnd: 15},
+					{SrcStart: 20, SrcEnd: 30, TargetStart: 25, TargetEnd: 35},
+				},
+				{
+					{SrcStart: 3, SrcEnd: 10, TargetStart: 108, TargetEnd: 115},
+					{SrcStart: 23, SrcEnd: 30, TargetStart: 25, TargetEnd: 35},
+				},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		got := splitRanges(tt.mr)
+		if len(got) != len(tt.want) {
+			t.Errorf("Number of matches %v, want %v", len(got), len(tt.want))
+		}
+		if !reflect.DeepEqual(got, tt.want) {
+			t.Errorf("SplitRanges(%q) = %v, want %v", tt.description, got, tt.want)
+		}
+	}
+}
+
+func TestSearchSet_MergeConsecutiveRanges(t *testing.T) {
+	tests := []struct {
+		description string
+		mr          []MatchRanges
+		want        []MatchRanges
+	}{
+		{
+			description: "No Overlap",
+			mr: []MatchRanges{
+				{
+					{SrcStart: 0, SrcEnd: 10, TargetStart: 5, TargetEnd: 15},
+					{SrcStart: 20, SrcEnd: 30, TargetStart: 25, TargetEnd: 35},
+				},
+				{
+					{SrcStart: 3, SrcEnd: 10, TargetStart: 108, TargetEnd: 115},
+					{SrcStart: 23, SrcEnd: 30, TargetStart: 25, TargetEnd: 35},
+				},
+			},
+			want: []MatchRanges{
+				{
+					{SrcStart: 0, SrcEnd: 10, TargetStart: 5, TargetEnd: 15},
+					{SrcStart: 20, SrcEnd: 30, TargetStart: 25, TargetEnd: 35},
+				},
+				{
+					{SrcStart: 3, SrcEnd: 10, TargetStart: 108, TargetEnd: 115},
+					{SrcStart: 23, SrcEnd: 30, TargetStart: 25, TargetEnd: 35},
+				},
+			},
+		},
+		{
+			description: "Consecutive Ranges No Overlap",
+			mr: []MatchRanges{
+				{
+					{SrcStart: 0, SrcEnd: 10, TargetStart: 5, TargetEnd: 15},
+					{SrcStart: 20, SrcEnd: 30, TargetStart: 25, TargetEnd: 35},
+				},
+				{
+					{SrcStart: 3, SrcEnd: 10, TargetStart: 35, TargetEnd: 41},
+					{SrcStart: 23, SrcEnd: 30, TargetStart: 125, TargetEnd: 135},
+				},
+			},
+			want: []MatchRanges{
+				{
+					{SrcStart: 0, SrcEnd: 10, TargetStart: 5, TargetEnd: 15},
+					{SrcStart: 20, SrcEnd: 30, TargetStart: 25, TargetEnd: 35},
+				},
+				{
+					{SrcStart: 3, SrcEnd: 10, TargetStart: 35, TargetEnd: 41},
+					{SrcStart: 23, SrcEnd: 30, TargetStart: 125, TargetEnd: 135},
+				},
+			},
+		},
+		{
+			description: "Consecutive Ranges with First Element Overlap",
+			mr: []MatchRanges{
+				{
+					{SrcStart: 0, SrcEnd: 10, TargetStart: 5, TargetEnd: 15},
+					{SrcStart: 20, SrcEnd: 30, TargetStart: 25, TargetEnd: 35},
+				},
+				{
+					{SrcStart: 3, SrcEnd: 10, TargetStart: 34, TargetEnd: 41},
+					{SrcStart: 33, SrcEnd: 40, TargetStart: 35, TargetEnd: 42},
+				},
+			},
+			want: []MatchRanges{
+				{
+					{SrcStart: 0, SrcEnd: 10, TargetStart: 5, TargetEnd: 15},
+					{SrcStart: 20, SrcEnd: 36, TargetStart: 25, TargetEnd: 41},
+					{SrcStart: 33, SrcEnd: 40, TargetStart: 35, TargetEnd: 42},
+				},
+			},
+		},
+		{
+			description: "Consecutive Ranges with Overlap",
+			mr: []MatchRanges{
+				{
+					{SrcStart: 0, SrcEnd: 10, TargetStart: 5, TargetEnd: 15},
+					{SrcStart: 20, SrcEnd: 30, TargetStart: 25, TargetEnd: 35},
+				},
+				{
+					{SrcStart: 3, SrcEnd: 10, TargetStart: 34, TargetEnd: 41},
+					{SrcStart: 33, SrcEnd: 40, TargetStart: 45, TargetEnd: 52},
+				},
+			},
+			want: []MatchRanges{
+				{
+					{SrcStart: 0, SrcEnd: 10, TargetStart: 5, TargetEnd: 15},
+					{SrcStart: 20, SrcEnd: 36, TargetStart: 25, TargetEnd: 41},
+					{SrcStart: 33, SrcEnd: 40, TargetStart: 45, TargetEnd: 52},
+				},
+			},
+		},
+		{
+			description: "Consecutive Ranges with Previous Deep Overlap",
+			mr: []MatchRanges{
+				{
+					{SrcStart: 0, SrcEnd: 10, TargetStart: 5, TargetEnd: 15},
+					{SrcStart: 20, SrcEnd: 30, TargetStart: 25, TargetEnd: 35},
+					{SrcStart: 120, SrcEnd: 130, TargetStart: 37, TargetEnd: 47},
+					{SrcStart: 122, SrcEnd: 132, TargetStart: 39, TargetEnd: 49},
+				},
+				{
+					{SrcStart: 3, SrcEnd: 10, TargetStart: 34, TargetEnd: 41},
+					{SrcStart: 33, SrcEnd: 40, TargetStart: 45, TargetEnd: 52},
+				},
+			},
+			want: []MatchRanges{
+				{
+					{SrcStart: 0, SrcEnd: 10, TargetStart: 5, TargetEnd: 15},
+					{SrcStart: 20, SrcEnd: 36, TargetStart: 25, TargetEnd: 41},
+					{SrcStart: 33, SrcEnd: 40, TargetStart: 45, TargetEnd: 52},
+				},
+			},
+		},
+		{
+			description: "Consecutive Ranges with Deep Overlap",
+			mr: []MatchRanges{
+				{
+					{SrcStart: 0, SrcEnd: 10, TargetStart: 5, TargetEnd: 15},
+					{SrcStart: 20, SrcEnd: 30, TargetStart: 25, TargetEnd: 35},
+					{SrcStart: 24, SrcEnd: 34, TargetStart: 29, TargetEnd: 39},
+					{SrcStart: 120, SrcEnd: 130, TargetStart: 37, TargetEnd: 47},
+					{SrcStart: 122, SrcEnd: 132, TargetStart: 39, TargetEnd: 49},
+				},
+				{
+					{SrcStart: 3, SrcEnd: 10, TargetStart: 26, TargetEnd: 33},
+					{SrcStart: 5, SrcEnd: 12, TargetStart: 28, TargetEnd: 35},
+					{SrcStart: 25, SrcEnd: 35, TargetStart: 31, TargetEnd: 41},
+				},
+			},
+			want: []MatchRanges{
+				{
+					{SrcStart: 0, SrcEnd: 10, TargetStart: 5, TargetEnd: 15},
+					{SrcStart: 20, SrcEnd: 30, TargetStart: 25, TargetEnd: 35},
+					{SrcStart: 24, SrcEnd: 34, TargetStart: 29, TargetEnd: 39},
+					{SrcStart: 25, SrcEnd: 35, TargetStart: 31, TargetEnd: 41},
+				},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		got := mergeConsecutiveRanges(tt.mr)
+		if len(got) != len(tt.want) {
+			t.Errorf("Number of matches %v, want %v", len(got), len(tt.want))
+		}
+		if !reflect.DeepEqual(got, tt.want) {
+			t.Errorf("SplitRanges(%q) = %v, want %v", tt.description, got, tt.want)
 		}
 	}
 }

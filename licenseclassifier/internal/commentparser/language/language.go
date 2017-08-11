@@ -45,6 +45,8 @@ const (
 	JavaScript
 	Flex
 	Lisp
+	Matlab
+	MySQL
 	NinjaBuild
 	ObjectiveC
 	Perl
@@ -75,9 +77,12 @@ const (
 	fortran           // ! ...
 	haskell           // -- ... and {- ... -}
 	html              // <!-- ... -->
-	lisp              // ;;
+	lisp              // ;; ...
+	matlab            // % ...
+	mysql             // # ... and /* ... */
 	ruby              // # ... and =begin ... =end
-	shell             // # ...
+	shell             // # ... and %{ ... %}
+	sql               // -- ... and /* ... */
 )
 
 // ClassifyLanguage determines what language the source code was written in. It
@@ -168,7 +173,7 @@ func (lang Language) commentStyle() style {
 		return cmake
 	case Fortran:
 		return fortran
-	case Haskell, SQL:
+	case Haskell:
 		return haskell
 	case HTML:
 		return html
@@ -178,6 +183,12 @@ func (lang Language) commentStyle() style {
 		return ruby
 	case Clif, NinjaBuild, Perl, Python, R, Shell, Yaml:
 		return shell
+	case Matlab:
+		return matlab
+	case MySQL:
+		return mysql
+	case SQL:
+		return sql
 	}
 	return unknown
 }
@@ -187,7 +198,7 @@ func (lang Language) commentStyle() style {
 // the end of line.
 func (lang Language) SingleLineCommentStart() string {
 	switch lang.commentStyle() {
-	case applescript, haskell:
+	case applescript, haskell, sql:
 		return "--"
 	case batch:
 		return "@REM"
@@ -197,7 +208,9 @@ func (lang Language) SingleLineCommentStart() string {
 		return "!"
 	case lisp:
 		return ";"
-	case shell, ruby, cmake:
+	case matlab:
+		return "%"
+	case shell, ruby, cmake, mysql:
 		return "#"
 	}
 	return ""
@@ -209,7 +222,7 @@ func (lang Language) MultilineCommentStart() string {
 	switch lang.commentStyle() {
 	case applescript:
 		return "(*"
-	case bcpl:
+	case bcpl, mysql:
 		if lang != Rust {
 			return "/*"
 		}
@@ -219,6 +232,8 @@ func (lang Language) MultilineCommentStart() string {
 		return "{-"
 	case html:
 		return "<!--"
+	case matlab:
+		return "%{"
 	case ruby:
 		return "=begin"
 	}
@@ -231,7 +246,7 @@ func (lang Language) MultilineCommentEnd() string {
 	switch lang.commentStyle() {
 	case applescript:
 		return "*)"
-	case bcpl:
+	case bcpl, mysql:
 		if lang != Rust {
 			return "*/"
 		}
@@ -241,6 +256,8 @@ func (lang Language) MultilineCommentEnd() string {
 		return "-}"
 	case html:
 		return "-->"
+	case matlab:
+		return "%}"
 	case ruby:
 		return "=end"
 	}

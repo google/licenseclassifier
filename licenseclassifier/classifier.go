@@ -37,8 +37,8 @@ import (
 	"github.com/google/licenseclassifier/stringclassifier/searchset"
 )
 
-// DefaultConfidenceThreshold is the minimum confidence percentage we're
-// willing to accept in order to say that a match is good.
+// DefaultConfidenceThreshold is the minimum confidence percentage we're willing to accept in order
+// to say that a match is good. http://go/license-classifier-conf-threshold
 const DefaultConfidenceThreshold = 0.80
 
 var (
@@ -46,8 +46,8 @@ var (
 	// before they are registered with the string classifier.
 	Normalizers = []stringclassifier.NormalizeFunc{
 		html.UnescapeString,
-		removeDecorativeLines,
-		removeCommonPrefix,
+		removeShebangLine,
+		removeNonWords,
 		normalizeEquivalentWords,
 		normalizePunctuation,
 		strings.ToLower,
@@ -83,10 +83,23 @@ type License struct {
 // New creates a license classifier and pre-loads it with known open source licenses.
 func New(threshold float64) (*License, error) {
 	classifier := &License{
-		c:         stringclassifier.New(Normalizers...),
+		c:         stringclassifier.New(stringclassifier.DefaultConfidenceThreshold, Normalizers...),
 		Threshold: threshold,
 	}
-	if err := classifier.registerLicenses(); err != nil {
+	if err := classifier.registerLicenses(LicenseArchive); err != nil {
+		return nil, fmt.Errorf("cannot register licenses: %v", err)
+	}
+	return classifier, nil
+}
+
+// NewWithForbiddenLicenses creates a license classifier and pre-loads it with
+// known open source licenses which are forbidden.
+func NewWithForbiddenLicenses(threshold float64) (*License, error) {
+	classifier := &License{
+		c:         stringclassifier.New(stringclassifier.DefaultConfidenceThreshold, Normalizers...),
+		Threshold: threshold,
+	}
+	if err := classifier.registerLicenses(ForbiddenLicenseArchive); err != nil {
 		return nil, fmt.Errorf("cannot register licenses: %v", err)
 	}
 	return classifier, nil
@@ -103,7 +116,7 @@ func (c *License) WithinConfidenceThreshold(conf float64) bool {
 // how confident the classifier is in the result.
 func (c *License) NearestMatch(contents string) *stringclassifier.Match {
 	if !c.hasCommonLicenseWords(contents) {
-		return &stringclassifier.Match{}
+		return nil
 	}
 	m := c.c.NearestMatch(contents)
 	m.Name = strings.TrimSuffix(m.Name, ".header")
@@ -112,13 +125,14 @@ func (c *License) NearestMatch(contents string) *stringclassifier.Match {
 
 // MultipleMatch matches all licenses within an unknown text.
 func (c *License) MultipleMatch(contents string, includeHeaders bool) stringclassifier.Matches {
-	if !c.hasCommonLicenseWords(contents) {
+	norm := normalizeText(contents)
+	if !c.hasCommonLicenseWords(norm) {
 		return nil
 	}
 
 	m := make(map[stringclassifier.Match]bool)
 	var matches stringclassifier.Matches
-	for _, v := range c.c.MultipleMatch(contents) {
+	for _, v := range c.c.MultipleMatch(norm) {
 		if !c.WithinConfidenceThreshold(v.Confidence) {
 			continue
 		}
@@ -128,6 +142,9 @@ func (c *License) MultipleMatch(contents string, includeHeaders bool) stringclas
 		}
 
 		v.Name = strings.TrimSuffix(v.Name, ".header")
+		if re, ok := forbiddenRegexps[v.Name]; ok && !re.MatchString(norm) {
+			continue
+		}
 		if _, ok := m[*v]; !ok {
 			m[*v] = true
 			matches = append(matches, v)
@@ -137,12 +154,18 @@ func (c *License) MultipleMatch(contents string, includeHeaders bool) stringclas
 	return matches
 }
 
+func normalizeText(s string) string {
+	for _, n := range Normalizers {
+		s = n(s)
+	}
+	return s
+}
+
 // hasCommonLicenseWords returns true if the unknown text has at least one word
 // that's common to all licenses.
-func (c *License) hasCommonLicenseWords(contents string) bool {
-	contents = normalizeEquivalentWords(contents)
+func (c *License) hasCommonLicenseWords(s string) bool {
 	for _, re := range commonLicenseWords {
-		if re.MatchString(contents) {
+		if re.MatchString(s) {
 			return true
 		}
 	}
@@ -155,6 +178,9 @@ const (
 	// LicenseArchive is the name of the archive containing preprocessed
 	// license texts.
 	LicenseArchive = "licenses.db"
+	// ForbiddenLicenseArchive is the name of the archive containing preprocessed
+	// forbidden license texts only.
+	ForbiddenLicenseArchive = "forbidden_licenses.db"
 )
 
 // ReadLicenseFile locates and reads the license file.
@@ -199,8 +225,8 @@ type archivedValue struct {
 // registerLicenses loads all known licenses and adds them to c as known values
 // for comparison. The allocated space after ingesting the 'licenses.db'
 // archive is ~167M.
-func (c *License) registerLicenses() error {
-	contents, err := ReadLicenseFile(LicenseArchive)
+func (c *License) registerLicenses(archive string) error {
+	contents, err := ReadLicenseFile(archive)
 	if contents == nil || err != nil {
 		return err
 	}
@@ -315,9 +341,6 @@ var ignorableTexts = []*regexp.Regexp{
 	regexp.MustCompile(`(?i)^copyright (\(c\) )?(\[yyyy\]|\d{4})[,.]? .*$`),
 	regexp.MustCompile(`(?i)^(all|some) rights reserved\.?$`),
 	regexp.MustCompile(`(?i)^@license$`),
-
-	// Separator lines.
-	regexp.MustCompile(`^[-/*=]+$`),
 	regexp.MustCompile(`^\s*$`),
 }
 
@@ -340,34 +363,21 @@ func removeIgnorableTexts(s string) string {
 		}
 	}
 	end := len(lines)
-	if lines[end-1] == " */" || lines[end-1] == "*/" {
-		// Remove multiline comment endings.
-		end--
+	if start > end {
+		return "\n"
 	}
 	return strings.Join(lines[start:end], "\n") + "\n"
 }
 
-// removeDecorativeLines removes lines from the beginning and end of text that
-// are purely decorative. I.e., when someone begins their comment blocks with
-// "/***************", etc.
-func removeDecorativeLines(s string) string {
+// removeShebangLine removes the '#!...' line if it's the first line in the
+// file. Note that if it's the only line in a comment, it won't be removed.
+func removeShebangLine(s string) string {
 	lines := strings.Split(s, "\n")
-	if len(lines) <= 1 {
+	if len(lines) <= 1 || !strings.HasPrefix(lines[0], "#!") {
 		return s
 	}
 
-	start, end := 0, len(lines)
-	for ; start < end; start++ {
-		if !isDecorative(lines[start]) {
-			break
-		}
-	}
-	for ; end > start; end-- {
-		if !isDecorative(lines[end-1]) {
-			break
-		}
-	}
-	return strings.Join(lines[start:end], "\n") + "\n"
+	return strings.Join(lines[1:], "\n")
 }
 
 // isDecorative returns true if the line is made up purely of non-letter and
@@ -381,86 +391,11 @@ func isDecorative(s string) bool {
 	return true
 }
 
-// removeCommonPrefix removes the common prefix from each line in a string. For
-// instance, a license that's in a comment may have beginning single-line
-// comment strings at the start of each line.  These aren't useful for
-// classification.
-func removeCommonPrefix(s string) string {
-	lines := strings.Split(s, "\n")
-	if len(lines) <= 1 {
-		return s
-	}
+var nonWords = regexp.MustCompile("[[:punct:]]+")
 
-	// Don't take starting and ending blank lines into account.
-	start, end := 0, len(lines)
-	for start < end && strings.TrimSpace(lines[start]) == "" {
-		start++
-	}
-	if start >= end {
-		return s
-	}
-
-	for end > start && strings.TrimSpace(lines[end-1]) == "" {
-		end--
-	}
-	if end <= start {
-		return s
-	}
-
-	// Find the place in the text where there starts to be a common prefix.
-	i := 0
-	for ; i < len(lines[start:end])-1; i++ {
-		if common := commonPrefix(lines[start+i], lines[start+i+1]); strings.TrimSpace(common) != "" {
-			break
-		}
-	}
-	start += i
-	if start >= end {
-		return s
-	}
-
-	// Find a common prefix from this point onward.
-	prefix := lines[start]
-	for _, curr := range lines[start+1 : end] {
-		if prefix = commonPrefix(prefix, curr); prefix == "" {
-			return s
-		}
-	}
-
-	// Remove the common prefix from each line.
-	for i := start; i < end; i++ {
-		lines[i] = lines[i][len(prefix):]
-	}
-	if strings.TrimSpace(strings.Join(lines[start:end], "")) == "" {
-		// Don't delete the whole string.
-		return s
-	}
-	return strings.Join(lines[start:end], "\n") + "\n"
-}
-
-// commonPrefix returns the common prefix string of two strings.
-func commonPrefix(a, b string) string {
-	if len(a) > len(b) {
-		// Make "a" the shortest slice.
-		a, b = b, a
-	}
-	i := 0
-	for ; i < len(a); i++ {
-		if !commonRune(rune(a[i])) || a[i] != b[i] {
-			break
-		}
-	}
-	return a[:i]
-}
-
-// commonRune returns true if the rune is one of those we care about when
-// looking for common prefixes to strings.
-func commonRune(c rune) bool {
-	switch c {
-	case ' ', '\t', '#', '*', '-', '/':
-		return true
-	}
-	return false
+// removeNonWords removes non-words from the string.
+func removeNonWords(s string) string {
+	return nonWords.ReplaceAllString(s, "")
 }
 
 // interchangeablePunctutation is punctuation that can be normalized.
