@@ -112,6 +112,7 @@ func New(threshold float64, funcs ...NormalizeFunc) *Classifier {
 type knownValue struct {
 	key             string
 	normalizedValue string
+	reValue         *regexp.Regexp
 	set             *searchset.SearchSet
 }
 
@@ -123,7 +124,12 @@ func (c *Classifier) AddValue(key, value string) error {
 	if _, ok := c.values[key]; ok {
 		return fmt.Errorf("value already registered with key %q", key)
 	}
-	c.values[key] = &knownValue{key: key, normalizedValue: c.normalize(value)}
+	norm := c.normalize(value)
+	c.values[key] = &knownValue{
+		key:             key,
+		normalizedValue: norm,
+		reValue:         regexp.MustCompile(norm),
+	}
 	return nil
 }
 
@@ -140,6 +146,7 @@ func (c *Classifier) AddPrecomputedValue(key, value string, set *searchset.Searc
 	c.values[key] = &knownValue{
 		key:             key,
 		normalizedValue: value,
+		reValue:         regexp.MustCompile(value),
 		set:             set,
 	}
 	return nil
@@ -352,8 +359,34 @@ func newMatcher(unknown string, threshold float64) *matcher {
 // the unknown text. The resulting matches can then filtered to determine which
 // are the best matches.
 func (m *matcher) findMatches(known *knownValue) {
+	var mrs []searchset.MatchRanges
+	if all := known.reValue.FindAllStringIndex(m.normUnknown, -1); all != nil {
+		// We found exact matches. Just use those!
+		for _, a := range all {
+			var start, end int
+			for i, tok := range m.unknown.Tokens {
+				if tok.Offset == a[0] {
+					start = i
+				} else if tok.Offset == a[len(a)-1]-len(tok.Text) {
+					end = i
+					break
+				}
+			}
+
+			mrs = append(mrs, searchset.MatchRanges{{
+				SrcStart:    0,
+				SrcEnd:      len(known.set.Tokens),
+				TargetStart: start,
+				TargetEnd:   end + 1,
+			}})
+		}
+	} else {
+		// No exact match. Perform a more thorough match.
+		mrs = searchset.FindPotentialMatches(known.set, m.unknown)
+	}
+
 	var wg sync.WaitGroup
-	for _, mr := range searchset.FindPotentialMatches(known.set, m.unknown) {
+	for _, mr := range mrs {
 		if !m.withinConfidenceThreshold(known.set, mr) {
 			continue
 		}

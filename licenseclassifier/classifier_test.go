@@ -24,11 +24,15 @@ import (
 )
 
 var (
-	agpl30Header, apache20, bsd3, gpl20 string
-	classifier                          *License
+	agpl30, agpl30Header, apache20, bsd3, gpl20, ccbync20 string
+	classifier                                            *License
 )
 
 func TestMain(m *testing.M) {
+	a30, err := ReadLicenseFile("AGPL-3.0.txt")
+	if err != nil {
+		log.Fatalf("error reading contents of AGPL-3.0.txt: %v", err)
+	}
 	a30h, err := ReadLicenseFile("AGPL-3.0.header.txt")
 	if err != nil {
 		log.Fatalf("error reading contents of AGPL-3.0.header.txt: %v", err)
@@ -45,11 +49,17 @@ func TestMain(m *testing.M) {
 	if err != nil {
 		log.Fatalf("error reading contents of GPL-2.0.txt: %v", err)
 	}
+	cc20, err := ReadLicenseFile("CC-BY-NC-2.0.txt")
+	if err != nil {
+		log.Fatalf("error reading contents of CC-BY-NC-2.0.txt: %v", err)
+	}
 
+	agpl30 = TrimExtraneousTrailingText(string(a30))
 	agpl30Header = TrimExtraneousTrailingText(string(a30h))
 	apache20 = TrimExtraneousTrailingText(string(a20))
 	bsd3 = TrimExtraneousTrailingText(string(b3))
 	gpl20 = TrimExtraneousTrailingText(string(g2))
+	ccbync20 = TrimExtraneousTrailingText(string(cc20))
 
 	classifier, err = New(DefaultConfidenceThreshold)
 	if err != nil {
@@ -119,18 +129,15 @@ func TestClassifier_MultipleMatch(t *testing.T) {
 	}{
 		{
 			description: "Two licenses",
-			text: "Copyright (c) 2016 Yoyodyne, Inc.\n" + apache20 +
-				strings.Repeat("-", 80) + "\n" + bsd3,
+			text:        "Copyright (c) 2016 Yoyodyne, Inc.\n" + apache20 + strings.Repeat("-", 80) + "\n" + bsd3,
 			want: stringclassifier.Matches{
 				{
 					Name:       "Apache-2.0",
 					Confidence: 1.0,
-					Offset:     0,
 				},
 				{
 					Name:       "BSD-3-Clause",
 					Confidence: 1.0,
-					Offset:     10317,
 				},
 			},
 		},
@@ -143,12 +150,24 @@ func TestClassifier_MultipleMatch(t *testing.T) {
 				{
 					Name:       "Apache-2.0",
 					Confidence: 0.99,
-					Offset:     0,
 				},
 				{
 					Name:       "BSD-3-Clause",
 					Confidence: 0.98,
-					Offset:     10309,
+				},
+			},
+		},
+		{
+			description: "Two licenses: one forbidden the other okay",
+			text:        "Copyright (c) 2016 Yoyodyne, Inc.\n" + apache20 + strings.Repeat("-", 80) + "\n" + ccbync20,
+			want: stringclassifier.Matches{
+				{
+					Name:       "Apache-2.0",
+					Confidence: 0.99,
+				},
+				{
+					Name:       "CC-BY-NC-2.0",
+					Confidence: 1.0,
 				},
 			},
 		},
@@ -571,7 +590,7 @@ func TestRemoveNonWords(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		if got := removeNonWords(tt.original); got != tt.want {
+		if got := RemoveNonWords(tt.original); got != tt.want {
 			t.Errorf("Mismatch(%q) => %v, want %v", tt.original, got, tt.want)
 		}
 	}
@@ -591,12 +610,12 @@ func TestNormalizePunctuation(t *testing.T) {
 
 		// Quotes.
 		{"'", "'"},
-		{"\"", "'"},
+		{`"`, "'"},
 		{"‘", "'"},
 		{"’", "'"},
 		{"“", "'"},
 		{"”", "'"},
-		{" ” ", "'"},
+		{" ” ", " ' "},
 
 		// Backtick.
 		{"`", "'"},
@@ -613,7 +632,7 @@ func TestNormalizePunctuation(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		if got := normalizePunctuation(tt.original); got != tt.want {
+		if got := NormalizePunctuation(tt.original); got != tt.want {
 			t.Errorf("Mismatch => %v, want %v", got, tt.want)
 		}
 	}
@@ -668,7 +687,7 @@ func TestNormalizeEquivalentWords(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		if got := normalizeEquivalentWords(tt.original); got != tt.want {
+		if got := NormalizeEquivalentWords(tt.original); got != tt.want {
 			t.Errorf("Mismatch => %v, want %v", got, tt.want)
 		}
 	}

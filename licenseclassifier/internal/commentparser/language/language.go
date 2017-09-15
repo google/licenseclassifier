@@ -36,14 +36,16 @@ const (
 	CMake
 	CSharp
 	Dart
+	Elixir
 	Fortran
 	GLSLF // OpenGL Shading Language
 	Go
 	Haskell
 	HTML
+	Flex
 	Java
 	JavaScript
-	Flex
+	Kotlin
 	Lisp
 	Matlab
 	MySQL
@@ -108,6 +110,8 @@ func ClassifyLanguage(filename string) Language {
 		return CSharp
 	case "dart":
 		return Dart
+	case "ex", "exs":
+		return Elixir
 	case "f", "f90", "f95":
 		return Fortran
 	case "glslf":
@@ -122,6 +126,8 @@ func ClassifyLanguage(filename string) Language {
 		return Java
 	case "js":
 		return JavaScript
+	case "kt":
+		return Kotlin
 	case "l":
 		return Flex
 	case "lisp", "el", "clj":
@@ -165,7 +171,7 @@ func ClassifyLanguage(filename string) Language {
 // commentStyle returns the language's comment style.
 func (lang Language) commentStyle() style {
 	switch lang {
-	case Assembly, C, CSharp, Dart, GLSLF, Go, Java, JavaScript, Flex, ObjectiveC, Rust, Shader, Swift, SWIG, TypeScript, Yacc:
+	case Assembly, C, CSharp, Dart, Flex, GLSLF, Go, Java, JavaScript, Kotlin, ObjectiveC, Rust, Shader, Swift, SWIG, TypeScript, Yacc:
 		return bcpl
 	case Batch:
 		return batch
@@ -181,7 +187,7 @@ func (lang Language) commentStyle() style {
 		return lisp
 	case Ruby:
 		return ruby
-	case Clif, NinjaBuild, Perl, Python, R, Shell, Yaml:
+	case Clif, Elixir, NinjaBuild, Perl, Python, R, Shell, Yaml:
 		return shell
 	case Matlab:
 		return matlab
@@ -241,7 +247,7 @@ func (lang Language) MultilineCommentStart() string {
 }
 
 // MultilineCommentEnd returns the ending string of a multiline comment for the
-// given langauge.
+// given language.
 func (lang Language) MultilineCommentEnd() string {
 	switch lang.commentStyle() {
 	case applescript:

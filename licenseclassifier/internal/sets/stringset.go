@@ -148,7 +148,7 @@ func (s *StringSet) Unique(other *StringSet) *StringSet {
 }
 
 // Equal returns true if the receiver and the argument StringSet contain
-// exactly the same elements. Returns false if the argument is nil.
+// exactly the same elements.
 func (s *StringSet) Equal(other *StringSet) bool {
 	if s == nil || other == nil {
 		return s == nil && other == nil

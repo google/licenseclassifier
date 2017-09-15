@@ -47,9 +47,9 @@ var (
 	Normalizers = []stringclassifier.NormalizeFunc{
 		html.UnescapeString,
 		removeShebangLine,
-		removeNonWords,
-		normalizeEquivalentWords,
-		normalizePunctuation,
+		RemoveNonWords,
+		NormalizeEquivalentWords,
+		NormalizePunctuation,
 		strings.ToLower,
 		removeIgnorableTexts,
 		stringclassifier.FlattenWhitespace,
@@ -227,7 +227,7 @@ type archivedValue struct {
 // archive is ~167M.
 func (c *License) registerLicenses(archive string) error {
 	contents, err := ReadLicenseFile(archive)
-	if contents == nil || err != nil {
+	if err != nil {
 		return err
 	}
 
@@ -393,8 +393,8 @@ func isDecorative(s string) bool {
 
 var nonWords = regexp.MustCompile("[[:punct:]]+")
 
-// removeNonWords removes non-words from the string.
-func removeNonWords(s string) string {
+// RemoveNonWords removes non-words from the string.
+func RemoveNonWords(s string) string {
 	return nonWords.ReplaceAllString(s, "")
 }
 
@@ -405,9 +405,8 @@ var interchangeablePunctuation = []struct {
 }{
 	// Hyphen, Dash, En Dash, and Em Dash.
 	{regexp.MustCompile(`[-‒–—]`), "-"},
-	// Single, Double, Curly Single, and Curly Double. (Extraneous spaces
-	// sometimes can occur around quotes.)
-	{regexp.MustCompile(`\s*` + "['\"`‘’“”]" + `\s*`), "'"},
+	// Single, Double, Curly Single, and Curly Double.
+	{regexp.MustCompile("['\"`‘’“”]"), "'"},
 	// Copyright.
 	{regexp.MustCompile("©"), "(c)"},
 	// Hyphen-separated words.
@@ -418,8 +417,8 @@ var interchangeablePunctuation = []struct {
 	{regexp.MustCompile("·"), "*"},
 }
 
-// normalizePunctuation takes all hyphens and quotes and normalizes them.
-func normalizePunctuation(s string) string {
+// NormalizePunctuation takes all hyphens and quotes and normalizes them.
+func NormalizePunctuation(s string) string {
 	for _, iw := range interchangeablePunctuation {
 		s = iw.interchangeable.ReplaceAllString(s, iw.substitute)
 	}
@@ -475,8 +474,8 @@ var interchangeableWords = []struct {
 	{regexp.MustCompile("(?i)Per cent"), "Percent"},
 }
 
-// normalizeEquivalentWords normalizes equivalent words that are interchangeable.
-func normalizeEquivalentWords(s string) string {
+// NormalizeEquivalentWords normalizes equivalent words that are interchangeable.
+func NormalizeEquivalentWords(s string) string {
 	for _, iw := range interchangeableWords {
 		s = iw.interchangeable.ReplaceAllString(s, iw.substitute)
 	}
