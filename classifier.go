@@ -174,7 +174,7 @@ func (c *License) hasCommonLicenseWords(s string) bool {
 
 const (
 	// LicenseDirectory is the directory where the prototype licenses are kept.
-	LicenseDirectory = "src/github.com/google/licenseclassifier/licenseclassifier/licenses"
+	LicenseDirectory = "src/github.com/google/licenseclassifier/licenses"
 	// LicenseArchive is the name of the archive containing preprocessed
 	// license texts.
 	LicenseArchive = "licenses.db"

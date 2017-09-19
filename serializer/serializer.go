@@ -26,7 +26,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/google/licenseclassifier/licenseclassifier"
+	"github.com/google/licenseclassifier"
 	"github.com/google/licenseclassifier/stringclassifier/searchset"
 )
 

@@ -18,7 +18,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/google/licenseclassifier/licenseclassifier/internal/commentparser/language"
+	"github.com/google/licenseclassifier/internal/commentparser/language"
 )
 
 const (
