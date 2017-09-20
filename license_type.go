@@ -117,6 +117,7 @@ const (
 	LGPL30                      = "LGPL-3.0"
 	LGPLLR                      = "LGPLLR"
 	Libpng                      = "Libpng"
+	Lil10                       = "Lil-1.0"
 	LPL102                      = "LPL-1.02"
 	LPL10                       = "LPL-1.0"
 	MIT                         = "MIT"
@@ -262,6 +263,7 @@ var (
 		ISC,
 		ImageMagick,
 		Libpng,
+		Lil10,
 		LPL102,
 		LPL10,
 		MSPL,
