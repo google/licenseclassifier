@@ -417,21 +417,19 @@ func TestCommentParser_ChunkIterator(t *testing.T) {
 				{StartLine: 1, EndLine: 1, Text: "Block 1 line 1"},
 				{StartLine: 2, EndLine: 2, Text: "Block 1 line 2"},
 			},
-			want: []Comments{
-				Comments{
-					{StartLine: 1, EndLine: 1, Text: "Block 1 line 1"},
-					{StartLine: 2, EndLine: 2, Text: "Block 1 line 2"},
-				},
-			},
+			want: []Comments{{
+				{StartLine: 1, EndLine: 1, Text: "Block 1 line 1"},
+				{StartLine: 2, EndLine: 2, Text: "Block 1 line 2"},
+			}},
 		},
 		{
 			description: "Multiline Comment Chunk",
-			comments: Comments{
-				{StartLine: 1, EndLine: 3, Text: "Multiline 1\n2\n3"},
-			},
-			want: []Comments{
-				Comments{{StartLine: 1, EndLine: 3, Text: "Multiline 1\n2\n3"}},
-			},
+			comments: Comments{{
+				StartLine: 1, EndLine: 3, Text: "Multiline 1\n2\n3",
+			}},
+			want: []Comments{{{
+				StartLine: 1, EndLine: 3, Text: "Multiline 1\n2\n3",
+			}}},
 		},
 		{
 			description: "Multiple Single Line Comment Chunks",
@@ -442,11 +440,11 @@ func TestCommentParser_ChunkIterator(t *testing.T) {
 				{StartLine: 5, EndLine: 5, Text: "Block 2 line 2"},
 			},
 			want: []Comments{
-				Comments{
+				{
 					{StartLine: 1, EndLine: 1, Text: "Block 1 line 1"},
 					{StartLine: 2, EndLine: 2, Text: "Block 1 line 2"},
 				},
-				Comments{
+				{
 					{StartLine: 4, EndLine: 4, Text: "Block 2 line 1"},
 					{StartLine: 5, EndLine: 5, Text: "Block 2 line 2"},
 				},
@@ -459,8 +457,8 @@ func TestCommentParser_ChunkIterator(t *testing.T) {
 				{StartLine: 4, EndLine: 6, Text: "Multiline 1\n2\n3"},
 			},
 			want: []Comments{
-				Comments{{StartLine: 1, EndLine: 3, Text: "Multiline 1\n2\n3"}},
-				Comments{{StartLine: 4, EndLine: 6, Text: "Multiline 1\n2\n3"}},
+				{{StartLine: 1, EndLine: 3, Text: "Multiline 1\n2\n3"}},
+				{{StartLine: 4, EndLine: 6, Text: "Multiline 1\n2\n3"}},
 			},
 		},
 		{
@@ -471,10 +469,10 @@ func TestCommentParser_ChunkIterator(t *testing.T) {
 				{StartLine: 5, EndLine: 5, Text: "Block 2 line 2"},
 			},
 			want: []Comments{
-				Comments{
+				{
 					{StartLine: 1, EndLine: 3, Text: "Multiline 1\n2\n3"},
 				},
-				Comments{
+				{
 					{StartLine: 4, EndLine: 4, Text: "Block 2 line 1"},
 					{StartLine: 5, EndLine: 5, Text: "Block 2 line 2"},
 				},
@@ -488,11 +486,11 @@ func TestCommentParser_ChunkIterator(t *testing.T) {
 				{StartLine: 4, EndLine: 7, Text: "\n * The first multiline line.\n * The second multiline line.\n"},
 			},
 			want: []Comments{
-				Comments{
+				{
 					{StartLine: 1, EndLine: 1, Text: " The first single line comment."},
 					{StartLine: 2, EndLine: 2, Text: " The second single line comment."},
 				},
-				Comments{
+				{
 					{StartLine: 4, EndLine: 7, Text: "\n * The first multiline line.\n * The second multiline line.\n"},
 				},
 			},
