@@ -21,7 +21,6 @@ import (
 	"io"
 	"log"
 	"os"
-	"path/filepath"
 	"reflect"
 	"sort"
 	"strings"
@@ -38,13 +37,13 @@ var (
 
 func TestMain(m *testing.M) {
 	var err error
-	apache20Header, err = licenseclassifier.ReadLicenseFile(filepath.Join(licenseclassifier.LicenseDirectory, "Apache-2.0.header.txt"))
+	apache20Header, err = licenseclassifier.ReadLicenseFile("Apache-2.0.header.txt")
 	if err != nil {
 		log.Fatalf("error reading contents of Apache-2.0.header.txt: %v", err)
 	}
 	normApache = normalize(string(apache20Header))
 
-	mit, err = licenseclassifier.ReadLicenseFile(filepath.Join(licenseclassifier.LicenseDirectory, "MIT.txt"))
+	mit, err = licenseclassifier.ReadLicenseFile("MIT.txt")
 	if err != nil {
 		log.Fatalf("error reading contents of MIT.txt: %v", err)
 	}

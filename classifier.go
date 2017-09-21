@@ -242,7 +242,6 @@ func (c *License) registerLicenses(archive string) error {
 
 	var muVals sync.Mutex
 	var vals []archivedValue
-	var wg sync.WaitGroup
 	for i := 0; ; i++ {
 		hdr, err := tr.Next()
 		if err == io.EOF {
@@ -272,19 +271,13 @@ func (c *License) registerLicenses(archive string) error {
 			return err
 		}
 
-		wg.Add(1)
-		go func(name, normalized string) {
-			defer wg.Done()
+		var set searchset.SearchSet
+		searchset.Deserialize(&b, &set)
 
-			var set searchset.SearchSet
-			searchset.Deserialize(&b, &set)
-
-			muVals.Lock()
-			vals = append(vals, archivedValue{name, normalized, &set})
-			muVals.Unlock()
-		}(name, normalized)
+		muVals.Lock()
+		vals = append(vals, archivedValue{name, normalized, &set})
+		muVals.Unlock()
 	}
-	wg.Wait()
 
 	for _, v := range vals {
 		if err = c.c.AddPrecomputedValue(v.name, v.normalized, v.set); err != nil {
