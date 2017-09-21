@@ -208,6 +208,6 @@ func BenchmarkStringSets_String(b *testing.B) {
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		s.String()
+		_ := s.String()
 	}
 }
