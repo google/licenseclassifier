@@ -1,12 +1,12 @@
 # License Classifier
 
-[TOC]
+[![Build status](https://travis-ci.org/google/licenseclassifier.svg?branch=master)](https://travis-ci.org/google/licenseclassifier)
 
 ## Introduction
 
 The license classifier is a library and set of tools that can analyze text to
 determine what type of license it contains. It searches for license texts in a
-file and compares it to an archive of known licenses. These files could be,
+file and compares them to an archive of known licenses. These files could be,
 e.g., `LICENSE` files with a single or multiple licenses in it, or source code
 files with the license text in a comment.
 
@@ -31,7 +31,7 @@ Adding a new license is straight-forward:
 3.  Regenerate the `licenses.db` file by running the license serializer:
 
     ```shell
-    license_serializer -output licenseclassifier/licenses
+    $ license_serializer -output licenseclassifier/licenses
     ```
 
 4.  Create and run appropriate tests to verify that the license is indeed
@@ -58,5 +58,9 @@ contains preprocessed license texts for quicker comparisons against unknown
 texts.
 
 ```shell
-license_serializer -output licenseclassifier/licenses
+$ license_serializer -output licenseclassifier/licenses
 ```
+
+----
+This is not an official Google product (experimental or otherwise), it is just
+code that happens to be owned by Google.
