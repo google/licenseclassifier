@@ -35,7 +35,7 @@ import (
 )
 
 // DefaultConfidenceThreshold is the minimum confidence percentage we're willing to accept in order
-// to say that a match is good. http://go/license-classifier-conf-threshold
+// to say that a match is good.
 const DefaultConfidenceThreshold = 0.80
 
 var (
