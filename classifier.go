@@ -27,7 +27,6 @@ import (
 	"regexp"
 	"sort"
 	"strings"
-	"sync"
 	"unicode"
 
 	"github.com/google/licenseclassifier/stringclassifier"
@@ -77,29 +76,38 @@ type License struct {
 	Threshold float64
 }
 
-// New creates a license classifier and pre-loads it with known open source licenses.
-func New(threshold float64) (*License, error) {
+// NewWithDB creates a licenses classifier based on a provided database,
+// such as the contents of licenses/licenses.db. Use the New or NewWithForbiddenLicenses
+// functions for easier constructors that seek out a suitable database file
+// in GOPATH.
+func NewWithDB(data []byte, threshold float64) (*License, error) {
 	classifier := &License{
 		c:         stringclassifier.New(stringclassifier.DefaultConfidenceThreshold, Normalizers...),
 		Threshold: threshold,
 	}
-	if err := classifier.registerLicenses(LicenseArchive); err != nil {
+	if err := classifier.registerLicenses(data); err != nil {
 		return nil, fmt.Errorf("cannot register licenses: %v", err)
 	}
 	return classifier, nil
 }
 
+// New creates a license classifier and pre-loads it with known open source licenses.
+func New(threshold float64) (*License, error) {
+	db, err := ReadLicenseFile(LicenseArchive)
+	if err != nil {
+		return nil, fmt.Errorf("cannot register licenses: %v", err)
+	}
+	return NewWithDB(db, threshold)
+}
+
 // NewWithForbiddenLicenses creates a license classifier and pre-loads it with
 // known open source licenses which are forbidden.
 func NewWithForbiddenLicenses(threshold float64) (*License, error) {
-	classifier := &License{
-		c:         stringclassifier.New(stringclassifier.DefaultConfidenceThreshold, Normalizers...),
-		Threshold: threshold,
-	}
-	if err := classifier.registerLicenses(ForbiddenLicenseArchive); err != nil {
+	db, err := ReadLicenseFile(ForbiddenLicenseArchive)
+	if err != nil {
 		return nil, fmt.Errorf("cannot register licenses: %v", err)
 	}
-	return classifier, nil
+	return NewWithDB(db, threshold)
 }
 
 // WithinConfidenceThreshold returns true if the confidence value is above or
@@ -178,12 +186,7 @@ type archivedValue struct {
 // registerLicenses loads all known licenses and adds them to c as known values
 // for comparison. The allocated space after ingesting the 'licenses.db'
 // archive is ~167M.
-func (c *License) registerLicenses(archive string) error {
-	contents, err := ReadLicenseFile(archive)
-	if err != nil {
-		return err
-	}
-
+func (c *License) registerLicenses(contents []byte) error {
 	reader := bytes.NewReader(contents)
 	gr, err := gzip.NewReader(reader)
 	if err != nil {
@@ -193,9 +196,8 @@ func (c *License) registerLicenses(archive string) error {
 
 	tr := tar.NewReader(gr)
 
-	var muVals sync.Mutex
 	var vals []archivedValue
-	for i := 0; ; i++ {
+	for {
 		hdr, err := tr.Next()
 		if err == io.EOF {
 			break
@@ -227,9 +229,7 @@ func (c *License) registerLicenses(archive string) error {
 		var set searchset.SearchSet
 		searchset.Deserialize(&b, &set)
 
-		muVals.Lock()
 		vals = append(vals, archivedValue{name, normalized, &set})
-		muVals.Unlock()
 	}
 
 	for _, v := range vals {
