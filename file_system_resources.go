@@ -15,6 +15,7 @@
 package licenseclassifier
 
 import (
+	"go/build"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -31,35 +32,34 @@ const (
 	ForbiddenLicenseArchive = "forbidden_licenses.db"
 )
 
-// ReadLicenseFile locates and reads the license file.
-func ReadLicenseFile(filename string) ([]byte, error) {
-	for _, path := range filepath.SplitList(os.Getenv("GOPATH")) {
-		archive := filepath.Join(path, LicenseDirectory, filename)
-		if _, err := os.Stat(archive); err != nil {
+func findInGOPATH(rel string) (fullPath string, err error) {
+	for _, path := range filepath.SplitList(build.Default.GOPATH) {
+		fullPath := filepath.Join(path, rel)
+		if _, err := os.Stat(fullPath); err != nil {
 			if os.IsNotExist(err) {
 				continue
 			}
-			return nil, err
+			return "", err
 		}
-
-		return ioutil.ReadFile(archive)
+		return fullPath, nil
 	}
-	return nil, nil
+	return "", nil
+}
+
+// ReadLicenseFile locates and reads the license file.
+func ReadLicenseFile(filename string) ([]byte, error) {
+	archive, err := findInGOPATH(filepath.Join(LicenseDirectory, filename))
+	if err != nil || archive == "" {
+		return nil, err
+	}
+	return ioutil.ReadFile(archive)
 }
 
 // ReadLicenseDir reads directory containing the license files.
 func ReadLicenseDir() ([]os.FileInfo, error) {
-	for _, path := range filepath.SplitList(os.Getenv("GOPATH")) {
-		dir := filepath.Join(path, LicenseDirectory)
-		filename := filepath.Join(dir, LicenseArchive)
-		if _, err := os.Stat(filename); err != nil {
-			if os.IsNotExist(err) {
-				continue
-			}
-			return nil, err
-		}
-
-		return ioutil.ReadDir(dir)
+	filename, err := findInGOPATH(filepath.Join(LicenseDirectory, LicenseArchive))
+	if err != nil || filename == "" {
+		return nil, err
 	}
-	return nil, nil
+	return ioutil.ReadDir(filepath.Dir(filename))
 }
