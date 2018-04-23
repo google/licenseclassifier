@@ -367,25 +367,25 @@ func TestClassifier_WithinConfidenceThreshold(t *testing.T) {
 		classifier.Threshold = DefaultConfidenceThreshold
 		m := classifier.NearestMatch(tt.text)
 		if got := classifier.WithinConfidenceThreshold(m.Confidence); got != tt.confDef {
-			t.Errorf("WithinConfidenceThreshold(%q) = %v, want %v", tt.description, got, tt.confDef)
+			t.Errorf("%s: WithinConfidenceThreshold(%f) = %v, want %v", tt.description, m.Confidence, got, tt.confDef)
 		}
 
 		classifier.Threshold = 0.99
 		m = classifier.NearestMatch(tt.text)
 		if got := classifier.WithinConfidenceThreshold(m.Confidence); got != tt.conf99 {
-			t.Errorf("WithinConfidenceThreshold(%q) = %v, want %v", tt.description, got, tt.conf99)
+			t.Errorf("%s: WithinConfidenceThreshold(%f) = %v, want %v", tt.description, m.Confidence, got, tt.conf99)
 		}
 
 		classifier.Threshold = 0.93
 		m = classifier.NearestMatch(tt.text)
 		if got := classifier.WithinConfidenceThreshold(m.Confidence); got != tt.conf93 {
-			t.Errorf("WithinConfidenceThreshold(%q) = %v, want %v", tt.description, got, tt.conf93)
+			t.Errorf("%s: WithinConfidenceThreshold(%f) = %v, want %v", tt.description, m.Confidence, got, tt.conf93)
 		}
 
 		classifier.Threshold = 0.05
 		m = classifier.NearestMatch(tt.text)
 		if got := classifier.WithinConfidenceThreshold(m.Confidence); got != tt.conf5 {
-			t.Errorf("WithinConfidenceThreshold(%q) = %v, want %v", tt.description, got, tt.conf5)
+			t.Errorf("%s: WithinConfidenceThreshold(%f) = %v, want %v", tt.description, m.Confidence, got, tt.conf5)
 		}
 	}
 }
