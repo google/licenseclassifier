@@ -118,7 +118,8 @@ func (c *License) WithinConfidenceThreshold(conf float64) bool {
 
 // NearestMatch returns the "nearest" match to the given set of known licenses.
 // Returned are the name of the license, and a confidence percentage indicating
-// how confident the classifier is in the result.
+// how confident the classifier is in the result. If the contents are different enough
+// to any plausible license, nil is returned.
 func (c *License) NearestMatch(contents string) *stringclassifier.Match {
 	if !c.hasCommonLicenseWords(contents) {
 		return nil
