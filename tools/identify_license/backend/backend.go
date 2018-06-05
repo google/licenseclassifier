@@ -23,8 +23,8 @@ import (
 	"time"
 
 	"github.com/google/licenseclassifier"
-	"github.com/google/licenseclassifier/internal/commentparser"
-	"github.com/google/licenseclassifier/internal/commentparser/language"
+	"github.com/google/licenseclassifier/internal/commentparser/commentparser"
+	"github.com/google/licenseclassifier/internal/commentparser/language/language"
 	"github.com/google/licenseclassifier/tools/identify_license/results"
 )
 
