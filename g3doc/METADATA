@@ -1,8 +1,0 @@
-# Format: google3/devtools/metadata/metadata.proto (go/google3metadata)
-
-name: "License Classifier"
-g3doc: {
-  headerfooter: {
-    name: "maia"
-  }
-}
