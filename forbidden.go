@@ -17,9 +17,9 @@ package licenseclassifier
 import "regexp"
 
 var (
-	reCCBYNC   = regexp.MustCompile(`(?i).*\bAttributionNonCommercial\b.*`)
-	reCCBYNCND = regexp.MustCompile(`(?i).*\bAttributionNonCommercialNoDerivs\b.*`)
-	reCCBYNCSA = regexp.MustCompile(`(?i).*\bAttributionNonCommercialShareAlike\b.*`)
+	reCCBYNC   = regexp.MustCompile(`(?i).*\bAttribution NonCommercial\b.*`)
+	reCCBYNCND = regexp.MustCompile(`(?i).*\bAttribution NonCommercial NoDerivs\b.*`)
+	reCCBYNCSA = regexp.MustCompile(`(?i).*\bAttribution NonCommercial ShareAlike\b.*`)
 
 	// forbiddenRegexps are regular expressions we expect to find in
 	// forbidden licenses. If we think we have a forbidden license but
@@ -33,11 +33,11 @@ var (
 		CCBYNC25:   reCCBYNC,
 		CCBYNC30:   reCCBYNC,
 		CCBYNC40:   reCCBYNC,
-		CCBYNCND10: regexp.MustCompile(`(?i).*\bAttributionNoDerivsNonCommercial\b.*`),
+		CCBYNCND10: regexp.MustCompile(`(?i).*\bAttribution NoDerivs NonCommercial\b.*`),
 		CCBYNCND20: reCCBYNCND,
 		CCBYNCND25: reCCBYNCND,
 		CCBYNCND30: reCCBYNCND,
-		CCBYNCND40: regexp.MustCompile(`(?i).*\bAttributionNonCommercialNoDerivatives\b.*`),
+		CCBYNCND40: regexp.MustCompile(`(?i).*\bAttribution NonCommercial NoDerivatives\b.*`),
 		CCBYNCSA10: reCCBYNCSA,
 		CCBYNCSA20: reCCBYNCSA,
 		CCBYNCSA25: reCCBYNCSA,

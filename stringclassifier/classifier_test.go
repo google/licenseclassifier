@@ -15,6 +15,7 @@ package stringclassifier
 
 import (
 	"reflect"
+	"regexp"
 	"sort"
 	"testing"
 
@@ -28,6 +29,9 @@ proposition that all men are created equal.`
 	modifiedGettysburg = `Four score and seven years ago our fathers brought forth
 on this continent, a nation that was new and improved, conceived in Liberty, and
 dedicated to the proposition that all men are created equal.`
+	gettysburgExtraWord = `Four score and seven years ago our fathers brought forth
+on this continent, a new nation, conceived in Liberty, and dedicated to the
+proposition that all men are created equal.Foobar`
 
 	declaration = `When in the Course of human events, it becomes necessary
 for one people to dissolve the political bands which have connected them with
@@ -108,7 +112,14 @@ theory to deconstruct the status quo.
 ? _ : _
 ]}
 `
+	nonWords = regexp.MustCompile("[[:punct:]]+")
 )
+
+// removeNonWords removes non-words from the string, replacing them with empty
+// string. (This is meant to exercise tokenization problems.)
+func removeNonWords(s string) string {
+	return nonWords.ReplaceAllString(s, "")
+}
 
 func TestClassify_NearestMatch(t *testing.T) {
 	c := New(DefaultConfidenceThreshold, FlattenWhitespace)
@@ -180,13 +191,18 @@ func TestClassify_MultipleMatch(t *testing.T) {
 	c.AddValue("declaration-close", declaration[:len(declaration)/2-1]+"_"+declaration[len(declaration)/2:])
 	c.AddValue("loremipsum", loremipsum)
 
+	cNormalize := New(DefaultConfidenceThreshold, FlattenWhitespace, removeNonWords)
+	cNormalize.AddValue("gettysburg", gettysburg)
+
 	tests := []struct {
 		description string
+		c           *Classifier
 		input       string // input string to match
 		want        []result
 	}{
 		{
 			description: "Exact text match",
+			c:           c,
 			input:       postmodernThesisNarratives + declaration + postmodernThesisCollapse,
 			want: []result{
 				{
@@ -199,6 +215,7 @@ func TestClassify_MultipleMatch(t *testing.T) {
 		},
 		{
 			description: "Partial text match",
+			c:           c,
 			input:       postmodernThesisNarratives + modifiedLorem + postmodernThesisCollapse,
 			want: []result{
 				{
@@ -211,6 +228,7 @@ func TestClassify_MultipleMatch(t *testing.T) {
 		},
 		{
 			description: "Two partial matches",
+			c:           c,
 			input:       postmodernThesisNarratives + modifiedLorem + postmodernThesisCollapse + modifiedGettysburg + postmodernThesisFatalFlaw,
 			want: []result{
 				{
@@ -229,6 +247,7 @@ func TestClassify_MultipleMatch(t *testing.T) {
 		},
 		{
 			description: "Partial matches of similar text",
+			c:           c,
 			input:       postmodernThesisNarratives + modifiedLorem + postmodernThesisCollapse + lessModifiedLorem + postmodernThesisFatalFlaw,
 			want: []result{
 				{
@@ -247,18 +266,33 @@ func TestClassify_MultipleMatch(t *testing.T) {
 		},
 		{
 			description: "Nullifiable text",
+			c:           c,
 			input:       nullifiable,
 			want:        nil,
 		},
 		{
 			description: "No match",
+			c:           c,
 			input:       postmodernThesisNarratives + postmodernThesisCollapse,
 			want:        nil,
+		},
+		{
+			description: "Exact text match, with extra word and non-word normalizer",
+			c:           cNormalize,
+			input:       postmodernThesisNarratives + gettysburgExtraWord + postmodernThesisCollapse,
+			want: []result{
+				{
+					key:     "gettysburg",
+					offset:  820,
+					minConf: 1.0,
+					maxConf: 1.0,
+				},
+			},
 		},
 	}
 
 	for _, tt := range tests {
-		matches := c.MultipleMatch(tt.input)
+		matches := tt.c.MultipleMatch(tt.input)
 		if len(matches) != len(tt.want) {
 			t.Errorf("MultipleMatch(%q) not enough matches = %v, want %v", tt.description, len(matches), len(tt.want))
 		}

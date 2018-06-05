@@ -367,7 +367,7 @@ func (m *matcher) findMatches(known *knownValue) {
 			for i, tok := range m.unknown.Tokens {
 				if tok.Offset == a[0] {
 					start = i
-				} else if tok.Offset == a[len(a)-1]-len(tok.Text) {
+				} else if tok.Offset >= a[len(a)-1]-len(tok.Text) {
 					end = i
 					break
 				}

@@ -172,6 +172,20 @@ func TestClassifier_MultipleMatch(t *testing.T) {
 				},
 			},
 		},
+		{
+			description: "Two licenses without any space between them.",
+			text:        apache20 + "." + bsd3,
+			want: stringclassifier.Matches{
+				{
+					Name:       "Apache-2.0",
+					Confidence: 1.0,
+				},
+				{
+					Name:       "BSD-3-Clause",
+					Confidence: 1.0,
+				},
+			},
+		},
 	}
 
 	classifier.Threshold = 0.95
@@ -367,25 +381,25 @@ func TestClassifier_WithinConfidenceThreshold(t *testing.T) {
 		classifier.Threshold = DefaultConfidenceThreshold
 		m := classifier.NearestMatch(tt.text)
 		if got := classifier.WithinConfidenceThreshold(m.Confidence); got != tt.confDef {
-			t.Errorf("%s: WithinConfidenceThreshold(%f) = %v, want %v", tt.description, m.Confidence, got, tt.confDef)
+			t.Errorf("WithinConfidenceThreshold(%q) = %v, want %v", tt.description, got, tt.confDef)
 		}
 
 		classifier.Threshold = 0.99
 		m = classifier.NearestMatch(tt.text)
 		if got := classifier.WithinConfidenceThreshold(m.Confidence); got != tt.conf99 {
-			t.Errorf("%s: WithinConfidenceThreshold(%f) = %v, want %v", tt.description, m.Confidence, got, tt.conf99)
+			t.Errorf("WithinConfidenceThreshold(%q) = %v, want %v", tt.description, got, tt.conf99)
 		}
 
 		classifier.Threshold = 0.93
 		m = classifier.NearestMatch(tt.text)
 		if got := classifier.WithinConfidenceThreshold(m.Confidence); got != tt.conf93 {
-			t.Errorf("%s: WithinConfidenceThreshold(%f) = %v, want %v", tt.description, m.Confidence, got, tt.conf93)
+			t.Errorf("WithinConfidenceThreshold(%q) = %v, want %v", tt.description, got, tt.conf93)
 		}
 
 		classifier.Threshold = 0.05
 		m = classifier.NearestMatch(tt.text)
 		if got := classifier.WithinConfidenceThreshold(m.Confidence); got != tt.conf5 {
-			t.Errorf("%s: WithinConfidenceThreshold(%f) = %v, want %v", tt.description, m.Confidence, got, tt.conf5)
+			t.Errorf("WithinConfidenceThreshold(%q) = %v, want %v", tt.description, got, tt.conf5)
 		}
 	}
 }
@@ -477,45 +491,27 @@ func TestRemoveNonWords(t *testing.T) {
 			original: `# # Hello
 ## World
 `,
-			want: `  Hello
- World
-`,
+			want: ` Hello World `,
 		},
 		{
 			original: ` * This text has a bulleted list:
  * * item 1
- * * item 2
-`,
-			want: `  This text has a bulleted list
-   item 1
-   item 2
-`,
+ * * item 2`,
+			want: ` This text has a bulleted list item 1 item 2`,
 		},
 		{
 			original: `
 
  * This text has a bulleted list:
  * * item 1
- * * item 2
-
-`,
-			want: `
-
-  This text has a bulleted list
-   item 1
-   item 2
-
-`,
+ * * item 2`,
+			want: ` This text has a bulleted list item 1 item 2`,
 		},
 		{
 			original: `// This text has a bulleted list:
 // 1. item 1
-// 2. item 2
-`,
-			want: ` This text has a bulleted list
- 1 item 1
- 2 item 2
-`,
+// 2. item 2`,
+			want: ` This text has a bulleted list 1 item 1 2 item 2`,
 		},
 		{
 			original: `// «Copyright (c) 1998 Yoyodyne, Inc.»
@@ -523,11 +519,7 @@ func TestRemoveNonWords(t *testing.T) {
 // 1. item 1
 // 2. item 2
 `,
-			want: ` «Copyright c 1998 Yoyodyne Inc»
- This text has a bulleted list
- 1 item 1
- 2 item 2
-`,
+			want: ` «Copyright c 1998 Yoyodyne Inc » This text has a bulleted list 1 item 1 2 item 2 `,
 		},
 		{
 			original: `*
@@ -536,12 +528,7 @@ func TestRemoveNonWords(t *testing.T) {
  * This is the third line we want.
  * This is the last line we want.
 `,
-			want: `
-  This is the first line we want
-  This is the second line we want
-  This is the third line we want
-  This is the last line we want
-`,
+			want: ` This is the first line we want This is the second line we want This is the third line we want This is the last line we want `,
 		},
 		{
 			original: `===---------------------------------------------===
@@ -553,36 +540,28 @@ func TestRemoveNonWords(t *testing.T) {
 ***
 ===---------------------------------------------===
 `,
-			want: `
-
- This is the first line we want
- This is the second line we want
- This is the third line we want
- This is the last line we want
-
-
-`,
+			want: ` This is the first line we want This is the second line we want This is the third line we want This is the last line we want `,
 		},
 		{
 			original: strings.Repeat("-", 80),
-			want:     "",
+			want:     " ",
 		},
 		{
 			original: strings.Repeat("=", 80),
-			want:     "",
+			want:     " ",
 		},
 		{
 			original: "/*\n",
-			want:     "\n",
+			want:     " ",
 		},
 		{
 			original: "/*\n * precursor text\n */\n",
-			want:     "\n  precursor text\n \n",
+			want:     " precursor text ",
 		},
 		// Test for b/63540492.
 		{
 			original: " */\n",
-			want:     " \n",
+			want:     " ",
 		},
 		{
 			original: "",
@@ -591,7 +570,7 @@ func TestRemoveNonWords(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		if got := RemoveNonWords(tt.original); got != tt.want {
+		if got := stringclassifier.FlattenWhitespace(RemoveNonWords(tt.original)); got != tt.want {
 			t.Errorf("Mismatch(%q) => %v, want %v", tt.original, got, tt.want)
 		}
 	}
