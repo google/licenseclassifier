@@ -23,8 +23,8 @@ import (
 	"time"
 
 	"github.com/google/licenseclassifier"
-	"github.com/google/licenseclassifier/internal/commentparser/commentparser"
-	"github.com/google/licenseclassifier/internal/commentparser/language/language"
+	"github.com/google/licenseclassifier/commentparser"
+	"github.com/google/licenseclassifier/commentparser/language"
 	"github.com/google/licenseclassifier/tools/identify_license/results"
 )
 
@@ -128,8 +128,10 @@ func (b *ClassifierBackend) classifyLicense(filename string, headers bool) error
 	if lang := language.ClassifyLanguage(filename); lang == language.Unknown {
 		matchLoop(string(contents))
 	} else {
+		log.Printf("detected language: %v", lang)
 		comments := commentparser.Parse(contents, lang)
 		for ch := range comments.ChunkIterator() {
+			log.Printf("%q", ch.String())
 			matchLoop(ch.String())
 		}
 	}
