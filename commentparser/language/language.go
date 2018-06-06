@@ -48,6 +48,7 @@ const (
 	Kotlin
 	Lisp
 	Matlab
+	Markdown
 	MySQL
 	NinjaBuild
 	ObjectiveC
@@ -120,7 +121,7 @@ func ClassifyLanguage(filename string) Language {
 		return Go
 	case "hs":
 		return Haskell
-	case "html", "htm", "md", "ng", "sgml":
+	case "html", "htm", "ng", "sgml":
 		return HTML
 	case "java":
 		return Java
@@ -134,6 +135,8 @@ func ClassifyLanguage(filename string) Language {
 		return Lisp
 	case "m", "mm":
 		return ObjectiveC
+	case "md":
+		return Markdown
 	case "gn":
 		return NinjaBuild
 	case "pl", "pm":
@@ -181,7 +184,7 @@ func (lang Language) commentStyle() style {
 		return fortran
 	case Haskell:
 		return haskell
-	case HTML:
+	case HTML, Markdown:
 		return html
 	case Clojure, Lisp:
 		return lisp
