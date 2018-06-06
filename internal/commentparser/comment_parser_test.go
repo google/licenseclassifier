@@ -18,6 +18,7 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/google/go-cmp"
 	"github.com/google/licenseclassifier/internal/commentparser/language/language"
 )
 
@@ -63,12 +64,59 @@ func TestCommentParser_Lex(t *testing.T) {
 		{
 			description: "Python Multiline String",
 			lang:        language.Python,
-			source:      fmt.Sprintf("#%s\n'''this is a multiline\nstring'''", singleLineText),
+			source:      fmt.Sprintf("#%s\n\n\n\nx = '''this is a multiline\nstring'''", singleLineText),
 			want: []*Comment{
 				{
 					StartLine: 1,
 					EndLine:   1,
 					Text:      singleLineText,
+				},
+			},
+		},
+		{
+			description: "Python module-level Docstring #1",
+			lang:        language.Python,
+			source:      fmt.Sprintf("'''%s'''\nimport foo", multilineText),
+			want: []*Comment{
+				{
+					StartLine: 1,
+					EndLine:   4,
+					Text:      multilineText,
+				},
+			},
+		},
+		{
+			description: "Python module-level Docstring #2",
+			lang:        language.Python,
+			source:      fmt.Sprintf("#!/usr/bin/python\n'''%s'''\nimport foo", multilineText),
+			want: []*Comment{
+				{
+					StartLine: 1,
+					EndLine:   1,
+					Text:      "!/usr/bin/python",
+				},
+				{
+					StartLine: 2,
+					EndLine:   5,
+					Text:      multilineText,
+				},
+			},
+		},
+		{
+			// Only include docstrings that start at the beginning of a line
+			description: "Python module-level Docstring #3",
+			lang:        language.Python,
+			source:      "'''zero1'''\n '''one'''\n  '''two'''\n'''zero2'''",
+			want: []*Comment{
+				{
+					StartLine: 1,
+					EndLine:   1,
+					Text:      "zero1",
+				},
+				{
+					StartLine: 4,
+					EndLine:   4,
+					Text:      "zero2",
 				},
 			},
 		},
@@ -394,8 +442,8 @@ close all;
 
 	for _, tt := range tests {
 		got := Parse([]byte(tt.source), tt.lang)
-		if !reflect.DeepEqual(got, tt.want) {
-			t.Errorf("Mismatch(%q) = %+v, want %+v", tt.description, got, tt.want)
+		if !cmp.Equal(got, tt.want) {
+			t.Errorf("Mismatch(%q) = %+v, want %+v, diff=%v", tt.description, got, tt.want, cmp.Diff(got, tt.want))
 		}
 	}
 }

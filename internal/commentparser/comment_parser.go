@@ -164,12 +164,23 @@ func (i *input) lex() {
 				break
 			}
 
+			var content bytes.Buffer
+			isDocString := false
 			quote := string(c)
 			if i.lang == language.Python {
 				if c == '\'' && i.match("'''") {
 					quote = "'''"
+					// Assume module-level docstrings start at the
+					// beginning of a line.  Function docstrings not
+					// supported.
+					if i.pos.lineRune[len(i.pos.lineRune)-1] == 3 {
+						isDocString = true
+					}
 				} else if c == '"' && i.match(`"""`) {
 					quote = `"""`
+					if i.pos.lineRune[len(i.pos.lineRune)-1] == 3 {
+						isDocString = true
+					}
 				} else {
 					i.readRune() // Eat quote.
 				}
@@ -195,11 +206,21 @@ func (i *input) lex() {
 					// newline as terminating the string.
 					break
 				}
-				i.readRune() // Eat character.
+				c := i.readRune()
+				if isDocString {
+					content.WriteRune(c)
+				}
 				if i.eof() {
 					log.Printf(eofInString, startLine)
 					return
 				}
+			}
+			if isDocString {
+				i.comments = append(i.comments, &Comment{
+					StartLine: startLine,
+					EndLine:   i.pos.line,
+					Text:      content.String(),
+				})
 			}
 		default:
 			startLine := i.pos.line
