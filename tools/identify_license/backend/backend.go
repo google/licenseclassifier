@@ -16,6 +16,7 @@
 package backend
 
 import (
+	"context"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -32,6 +33,7 @@ import (
 type ClassifierInterface interface {
 	Close()
 	ClassifyLicenses(filenames []string, headers bool) []error
+	ClassifyLicensesWithContext(ctx context.Context, filenames []string, headers bool) []error
 	GetResults() results.LicenseTypes
 }
 
@@ -99,6 +101,23 @@ func (b *ClassifierBackend) ClassifyLicenses(filenames []string, headers bool) (
 		errors = append(errors, err)
 	}
 	return errors
+}
+
+// ClassifyLicensesWithContext runs the license classifier over the given file; ensure that it will respect the timeout in the provided context.
+func (b *ClassifierBackend) ClassifyLicensesWithContext(ctx context.Context, filenames []string, headers bool) (errors []error) {
+	done := make(chan bool)
+	go func() {
+		errors = b.ClassifyLicenses(filenames, headers)
+		done <- true
+	}()
+	select {
+	case <-ctx.Done():
+		err := ctx.Err()
+		errors = append(errors, err)
+		return errors
+	case <-done:
+		return errors
+	}
 }
 
 // classifyLicense is called by a Go-function to perform the actual

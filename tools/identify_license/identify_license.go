@@ -26,12 +26,14 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"fmt"
 	"log"
 	"os"
 	"path/filepath"
 	"sort"
+	"time"
 
 	"github.com/google/licenseclassifier"
 	"github.com/google/licenseclassifier/tools/identify_license/backend"
@@ -41,6 +43,7 @@ var (
 	headers       = flag.Bool("headers", false, "match license headers")
 	forbiddenOnly = flag.Bool("forbidden", false, "identify using forbidden licenses archive")
 	threshold     = flag.Float64("threshold", licenseclassifier.DefaultConfidenceThreshold, "confidence threshold")
+	timeout       = flag.Duration("timeout", 24*time.Hour, "timeout before giving up on classifying a file.")
 )
 
 func init() {
@@ -64,7 +67,9 @@ func main() {
 		log.Fatalf("cannot create license classifier: %v", err)
 	}
 
-	if errs := be.ClassifyLicenses(flag.Args(), *headers); errs != nil {
+	ctx, cancel := context.WithTimeout(context.Background(), *timeout)
+	defer cancel()
+	if errs := be.ClassifyLicensesWithContext(ctx, flag.Args(), *headers); errs != nil {
 		be.Close()
 		for _, err := range errs {
 			log.Printf("classify license failed: %v", err)
