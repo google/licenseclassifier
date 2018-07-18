@@ -80,7 +80,7 @@ type License struct {
 // New creates a license classifier and pre-loads it with known open source licenses.
 func New(threshold float64) (*License, error) {
 	classifier := &License{
-		c:         stringclassifier.New(stringclassifier.DefaultConfidenceThreshold, Normalizers...),
+		c:         stringclassifier.New(threshold, Normalizers...),
 		Threshold: threshold,
 	}
 	if err := classifier.registerLicenses(LicenseArchive); err != nil {
@@ -93,7 +93,7 @@ func New(threshold float64) (*License, error) {
 // known open source licenses which are forbidden.
 func NewWithForbiddenLicenses(threshold float64) (*License, error) {
 	classifier := &License{
-		c:         stringclassifier.New(stringclassifier.DefaultConfidenceThreshold, Normalizers...),
+		c:         stringclassifier.New(threshold, Normalizers...),
 		Threshold: threshold,
 	}
 	if err := classifier.registerLicenses(ForbiddenLicenseArchive); err != nil {
