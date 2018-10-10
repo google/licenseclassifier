@@ -89,6 +89,7 @@ const (
 	CCBYSA40                    = "CC-BY-SA-4.0"
 	CDDL10                      = "CDDL-1.0"
 	CDDL11                      = "CDDL-1.1"
+	CommonsClause               = "Commons-Clause"
 	CPAL10                      = "CPAL-1.0"
 	CPL10                       = "CPL-1.0"
 	eGenix                      = "eGenix"
@@ -336,6 +337,7 @@ var (
 		CCBYNCSA25,
 		CCBYNCSA30,
 		CCBYNCSA40,
+		CommonsClause,
 		Facebook2Clause,
 		Facebook3Clause,
 		FacebookExamples,
