@@ -141,6 +141,7 @@ const (
 	PHP301                      = "PHP-3.01"
 	PHP30                       = "PHP-3.0"
 	PIL                         = "PIL"
+	Python20complete            = "Python-2.0-complete"
 	Python20                    = "Python-2.0"
 	QPL10                       = "QPL-1.0"
 	Ruby                        = "Ruby"
@@ -278,6 +279,7 @@ var (
 		PHP30,
 		PIL,
 		Python20,
+		Python20complete,
 		SGIB10,
 		SGIB11,
 		SGIB20,
