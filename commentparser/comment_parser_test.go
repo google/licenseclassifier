@@ -18,7 +18,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/google/go-cmp/cmp"
+	"github.com/google/go-cmp"
 	"github.com/google/licenseclassifier/commentparser/language"
 )
 
