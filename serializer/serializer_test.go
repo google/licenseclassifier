@@ -213,7 +213,7 @@ func compareSearchSets(x, y *searchset.SearchSet) error {
 			return fmt.Errorf("Hash keys differ = %d vs %d", xKeys[i], yKeys[i])
 		}
 		if !reflect.DeepEqual(x.Hashes[xKeys[i]], y.Hashes[yKeys[i]]) {
-			return fmt.Errorf("Hash values differ = %d vs %d", x.Hashes[xKeys[i]], y.Hashes[yKeys[i]])
+			return fmt.Errorf("Hash values differ = %v vs %v", x.Hashes[xKeys[i]], y.Hashes[yKeys[i]])
 		}
 	}
 
