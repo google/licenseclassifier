@@ -28,9 +28,9 @@ import (
 )
 
 const (
-	eofInString            = "%d:EOF in string"
-	eofInSingleLineComment = "%d:EOF in single line comment"
-	eofInMultilineComment  = "%d:EOF in multiline comment"
+	eofInString            = "commentparser: Line %d > EOF in string"
+	eofInSingleLineComment = "commentparser: Line %d > EOF in single line comment"
+	eofInMultilineComment  = "commentparser: Line %d > EOF in multiline comment"
 )
 
 // Parse parses the input data and returns the comments.
