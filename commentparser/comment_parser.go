@@ -27,12 +27,6 @@ import (
 	"github.com/google/licenseclassifier/commentparser/language"
 )
 
-const (
-	eofInString            = "commentparser: Line %d > EOF in string"
-	eofInSingleLineComment = "commentparser: Line %d > EOF in single line comment"
-	eofInMultilineComment  = "commentparser: Line %d > EOF in multiline comment"
-)
-
 // Parse parses the input data and returns the comments.
 func Parse(contents []byte, lang language.Language) Comments {
 	if len(contents) == 0 {
@@ -192,7 +186,7 @@ func (i *input) lex() {
 			for {
 				c, ok = i.peekRune()
 				if !ok {
-					log.Printf(eofInString, startLine)
+					// EOF in string
 					return
 				}
 				if hasEscape && c == '\\' {
@@ -211,7 +205,7 @@ func (i *input) lex() {
 					content.WriteRune(c)
 				}
 				if i.eof() {
-					log.Printf(eofInString, startLine)
+					// EOF in string
 					return
 				}
 			}
@@ -230,7 +224,7 @@ func (i *input) lex() {
 				startLine := i.pos.line
 				for {
 					if i.eof() {
-						log.Printf(eofInMultilineComment, startLine)
+						// EOF in multiline comment
 						return
 					}
 					c := i.readRune()
@@ -257,7 +251,7 @@ func (i *input) lex() {
 			} else if i.singleLineComment() { // Single line comment
 				for {
 					if i.eof() {
-						log.Printf(eofInSingleLineComment, i.pos.line)
+						// EOF in single line comment
 						return
 					}
 					c = i.readRune()
