@@ -15,6 +15,7 @@
 package licenseclassifier
 
 import (
+	"bytes"
 	"log"
 	"os"
 	"path/filepath"
@@ -802,23 +803,40 @@ func TestNew(t *testing.T) {
 	tests := []struct {
 		desc        string
 		options     []OptionFunc
-		wantArchive string
+		wantArchive func() []byte
 		wantErr     bool
 	}{
 		{
 			desc:        "no options, use default",
 			options:     []OptionFunc{},
-			wantArchive: LicenseArchive,
+			wantArchive: nil,
 		},
 		{
-			desc:        "specify ForbiddenLicenseArchive",
-			options:     []OptionFunc{Archive(ForbiddenLicenseArchive)},
-			wantArchive: ForbiddenLicenseArchive,
+			desc:    "specify ForbiddenLicenseArchive",
+			options: []OptionFunc{Archive(ForbiddenLicenseArchive)},
+			wantArchive: func() []byte {
+				b, _ := ReadLicenseFile(ForbiddenLicenseArchive)
+				return b
+			},
 		},
 		{
 			desc:        "file doesn't exist results in error",
 			options:     []OptionFunc{Archive("doesnotexist")},
-			wantArchive: "doesnotexist",
+			wantArchive: func() []byte { return nil },
+			wantErr:     true,
+		},
+		{
+			desc:        "raw bytes archive",
+			options:     []OptionFunc{ArchiveBytes([]byte("not a gzipped file"))},
+			wantArchive: func() []byte { return []byte("not a gzipped file") },
+			wantErr:     true,
+		},
+		{
+			desc: "function archive",
+			options: []OptionFunc{ArchiveFunc(func() ([]byte, error) {
+				return []byte("not a gzipped file"), nil
+			})},
+			wantArchive: func() []byte { return []byte("not a gzipped file") },
 			wantErr:     true,
 		},
 	}
@@ -828,8 +846,18 @@ func TestNew(t *testing.T) {
 			if tt.wantErr != (err != nil) {
 				t.Fatalf("unexpected error: %v", err)
 			}
-			if err == nil && c.archive != tt.wantArchive {
-				t.Errorf("got archive %v, want %v", c.archive, tt.wantArchive)
+			if err == nil {
+				if tt.wantArchive == nil {
+					if c.archive != nil {
+						t.Errorf("wanted default archive, but got specified archive")
+					}
+				} else {
+					got, _ := c.archive()
+					want := tt.wantArchive()
+					if !bytes.Equal(got, want) {
+						t.Errorf("archives did not match; got %d bytes, wanted %d", len(got), len(want))
+					}
+				}
 			}
 		})
 	}
