@@ -76,8 +76,10 @@ type License struct {
 	// classifier.
 	Threshold float64
 
-	// archive is the path to the license archive
-	archive string
+	// archive is a function that must return the contents of the license archive.
+	// When archive is nil, ReadLicenseFile(LicenseFile) is used to retrieve the
+	// contents.
+	archive func() ([]byte, error)
 }
 
 // OptionFunc set options on a License struct.
@@ -85,6 +87,24 @@ type OptionFunc func(l *License) error
 
 // Archive is an OptionFunc to specify the location of the license archive file.
 func Archive(f string) OptionFunc {
+	return func(l *License) error {
+		l.archive = func() ([]byte, error) { return ReadLicenseFile(f) }
+		return nil
+	}
+}
+
+// ArchiveBytes is an OptionFunc that provides the contents of the license archive file.
+// The caller must not overwrite the contents of b as it is not copied.
+func ArchiveBytes(b []byte) OptionFunc {
+	return func(l *License) error {
+		l.archive = func() ([]byte, error) { return b, nil }
+		return nil
+	}
+}
+
+// ArchiveFunc is an OptionFunc that provides a function that must return the contents
+// of the license archive file.
+func ArchiveFunc(f func() ([]byte, error)) OptionFunc {
 	return func(l *License) error {
 		l.archive = f
 		return nil
@@ -96,7 +116,6 @@ func New(threshold float64, options ...OptionFunc) (*License, error) {
 	classifier := &License{
 		c:         stringclassifier.New(threshold, Normalizers...),
 		Threshold: threshold,
-		archive:   LicenseArchive,
 	}
 
 	for _, o := range options {
@@ -107,7 +126,7 @@ func New(threshold float64, options ...OptionFunc) (*License, error) {
 	}
 
 	if err := classifier.registerLicenses(); err != nil {
-		return nil, fmt.Errorf("cannot register licenses from %q: %v", classifier.archive, err)
+		return nil, fmt.Errorf("cannot register licenses from archive: %v", err)
 	}
 	return classifier, nil
 }
@@ -197,7 +216,13 @@ type archivedValue struct {
 // for comparison. The allocated space after ingesting the 'licenses.db'
 // archive is ~167M.
 func (c *License) registerLicenses() error {
-	contents, err := ReadLicenseFile(c.archive)
+	var contents []byte
+	var err error
+	if c.archive == nil {
+		contents, err = ReadLicenseFile(LicenseArchive)
+	} else {
+		contents, err = c.archive()
+	}
 	if err != nil {
 		return err
 	}

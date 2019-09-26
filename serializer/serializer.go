@@ -55,12 +55,12 @@ func ArchiveLicenses(licenses []string, w io.Writer) error {
 			str = n(str)
 		}
 
-		baseName := strings.TrimSuffix(license, ext)
+		baseName := strings.TrimSuffix(filepath.Base(license), ext)
 
 		// Serialize the normalized license text.
 		log.Printf("Serializing %q", baseName)
 		hdr := &tar.Header{
-			Name: license,
+			Name: filepath.Base(license),
 			Mode: 0644,
 			Size: int64(len(str)),
 		}
