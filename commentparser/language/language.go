@@ -29,26 +29,29 @@ const (
 	Unknown Language = iota
 	AppleScript
 	Assembly
+	BLIF // Berkley Logic Interface Format
 	Batch
 	C
-	Clif
-	Clojure
 	CMake
 	CSharp
+	Clif
+	Clojure
 	Dart
+	EDIF // Electronic Design Interchange Format
 	Elixir
+	Flex
 	Fortran
 	GLSLF // OpenGL Shading Language
 	Go
-	Haskell
 	HTML
-	Flex
+	Haskell
 	Java
 	JavaScript
 	Kotlin
+	LEF // Library Exchange Format
 	Lisp
-	Matlab
 	Markdown
+	Matlab
 	MySQL
 	NinjaBuild
 	ObjectiveC
@@ -57,12 +60,19 @@ const (
 	R
 	Ruby
 	Rust
+	SDC  // Synopsis Design Constraint
+	SDF  // Standard Delay Format
+	SPEF // Standard Parasitics Exchange Format
+	SQL
+	SWIG
 	Shader
 	Shell
-	SQL
 	Swift
-	SWIG
+	SystemVerilog
+	TCL
 	TypeScript
+	Verilog
+	XDC // Xilinx Design Constraint files
 	Yacc
 	Yaml
 )
@@ -78,6 +88,7 @@ const (
 	bcpl              // // ... and /* ... */
 	cmake             // # ... and #[[ ... ]]
 	fortran           // ! ...
+	hash              // # ...
 	haskell           // -- ... and {- ... -}
 	html              // <!-- ... -->
 	lisp              // ;; ...
@@ -101,6 +112,8 @@ func ClassifyLanguage(filename string) Language {
 		return AppleScript
 	case "bat":
 		return Batch
+	case "blif", "eblif":
+		return BLIF
 	case "c", "cc", "cpp", "c++", "h", "hh", "hpp":
 		return C
 	case "clif":
@@ -131,6 +144,8 @@ func ClassifyLanguage(filename string) Language {
 		return Kotlin
 	case "l":
 		return Flex
+	case "lef":
+		return LEF
 	case "lisp", "el", "clj":
 		return Lisp
 	case "m", "mm":
@@ -151,6 +166,8 @@ func ClassifyLanguage(filename string) Language {
 		return Rust
 	case "s":
 		return Assembly
+	case "sdf":
+		return SDF
 	case "sh":
 		return Shell
 	case "shader":
@@ -161,8 +178,14 @@ func ClassifyLanguage(filename string) Language {
 		return Swift
 	case "swig":
 		return SWIG
+	case "sv", "svh":
+		return SystemVerilog
+	case "tcl", "sdc", "xdc":
+		return TCL
 	case "ts", "tsx":
 		return TypeScript
+	case "v", "vh":
+		return Verilog
 	case "y":
 		return Yacc
 	case "yaml":
@@ -174,10 +197,12 @@ func ClassifyLanguage(filename string) Language {
 // commentStyle returns the language's comment style.
 func (lang Language) commentStyle() style {
 	switch lang {
-	case Assembly, C, CSharp, Dart, Flex, GLSLF, Go, Java, JavaScript, Kotlin, ObjectiveC, Rust, Shader, Swift, SWIG, TypeScript, Yacc:
+	case Assembly, C, CSharp, Dart, Flex, GLSLF, Go, Java, JavaScript, Kotlin, ObjectiveC, Rust, Shader, Swift, SWIG, TypeScript, Yacc, Verilog, SystemVerilog, SDF, SPEF:
 		return bcpl
 	case Batch:
 		return batch
+	case BLIF, TCL:
+		return hash
 	case CMake:
 		return cmake
 	case Fortran:
@@ -219,7 +244,7 @@ func (lang Language) SingleLineCommentStart() string {
 		return ";"
 	case matlab:
 		return "%"
-	case shell, ruby, cmake, mysql:
+	case shell, ruby, cmake, mysql, hash:
 		return "#"
 	}
 	return ""
