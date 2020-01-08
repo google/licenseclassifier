@@ -20,7 +20,6 @@ package commentparser
 
 import (
 	"bytes"
-	"log"
 	"strings"
 	"unicode/utf8"
 
@@ -28,9 +27,9 @@ import (
 )
 
 const (
-	eofInString            = "commentparser: Line %d > EOF in string"
-	eofInSingleLineComment = "commentparser: Line %d > EOF in single line comment"
-	eofInMultilineComment  = "commentparser: Line %d > EOF in multiline comment"
+	eofInString            = "%d:EOF in string"
+	eofInSingleLineComment = "%d:EOF in single line comment"
+	eofInMultilineComment  = "%d:EOF in multiline comment"
 )
 
 // Parse parses the input data and returns the comments.
@@ -192,7 +191,6 @@ func (i *input) lex() {
 			for {
 				c, ok = i.peekRune()
 				if !ok {
-					log.Printf(eofInString, startLine)
 					return
 				}
 				if hasEscape && c == '\\' {
@@ -211,7 +209,6 @@ func (i *input) lex() {
 					content.WriteRune(c)
 				}
 				if i.eof() {
-					log.Printf(eofInString, startLine)
 					return
 				}
 			}
@@ -230,7 +227,6 @@ func (i *input) lex() {
 				startLine := i.pos.line
 				for {
 					if i.eof() {
-						log.Printf(eofInMultilineComment, startLine)
 						return
 					}
 					c := i.readRune()
@@ -257,7 +253,6 @@ func (i *input) lex() {
 			} else if i.singleLineComment() { // Single line comment
 				for {
 					if i.eof() {
-						log.Printf(eofInSingleLineComment, i.pos.line)
 						return
 					}
 					c = i.readRune()

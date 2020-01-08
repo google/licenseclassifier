@@ -32,10 +32,10 @@ const (
 	BLIF // Berkley Logic Interface Format
 	Batch
 	C
-	CMake
-	CSharp
 	Clif
 	Clojure
+	CMake
+	CSharp
 	Dart
 	EDIF // Electronic Design Interchange Format
 	Elixir
