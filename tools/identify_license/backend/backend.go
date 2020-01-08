@@ -150,7 +150,6 @@ func (b *ClassifierBackend) classifyLicense(filename string, headers bool) error
 		log.Printf("detected language: %v", lang)
 		comments := commentparser.Parse(contents, lang)
 		for ch := range comments.ChunkIterator() {
-			log.Printf("%q", ch.String())
 			matchLoop(ch.String())
 		}
 	}
