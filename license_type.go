@@ -168,6 +168,7 @@ const (
 	X11                         = "X11"
 	Xnet                        = "Xnet"
 	Zend20                      = "Zend-2.0"
+	ZeroBSD                     = "0BSD"
 	ZlibAcknowledgement         = "zlib-acknowledgement"
 	Zlib                        = "Zlib"
 	ZPL11                       = "ZPL-1.1"
@@ -323,6 +324,7 @@ var (
 	unencumberedType = sets.NewStringSet(
 		CC010,
 		Unlicense,
+		ZeroBSD,
 	)
 
 	// byexceptiononly - Licenses that are incompatible with all (or most)
