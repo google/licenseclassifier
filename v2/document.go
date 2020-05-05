@@ -15,6 +15,8 @@
 // Package classifier provides the implementation of the v2 license classifier.
 package classifier
 
+import "strings"
+
 type tokenID int // type to ensure safety when manipulating token identifiers.
 
 // token provides detailed information about a single textual token in the document.
@@ -41,6 +43,30 @@ type indexedDocument struct {
 	Tokens []indexedToken  // ordered tokens of the document
 	f      *frequencyTable // frequencies computed for this document
 	dict   *dictionary     // The corpus dictionary for this document
+	s      *searchSet      // The searchset for this document
+}
+
+func (d *indexedDocument) generateSearchSet(q int) {
+	d.s = newSearchSet(d, q)
+}
+
+func (d *indexedDocument) size() int {
+	return len(d.Tokens)
+}
+
+// normalized returns a string of the normalized tokens concatenated with a
+// single space. This is used by the diff algorithm.
+// TODO: it'd be more efficient to have the diff algorithm work with the raw tokens directly
+// and avoid these ephemeral allocations.
+func (d *indexedDocument) normalized() string {
+	var w strings.Builder
+	for i, t := range d.Tokens {
+		w.WriteString(d.dict.getWord(t.ID))
+		if (i + 1) != len(d.Tokens) {
+			w.WriteString(" ")
+		}
+	}
+	return w.String()
 }
 
 // Corpus is a collection of documents with a shared dictionary. Matching occurs
@@ -51,6 +77,7 @@ type Corpus struct {
 	dict      *dictionary
 	docs      map[string]*indexedDocument
 	threshold float64
+	q         int // The value of q for q-grams in this corpus
 }
 
 // NewCorpus creates an empty corpus.
@@ -59,8 +86,33 @@ func NewCorpus(threshold float64) *Corpus {
 		dict:      newDictionary(),
 		docs:      make(map[string]*indexedDocument),
 		threshold: threshold,
+		q:         computeQ(threshold),
 	}
 	return corpus
+}
+
+func computeQ(threshold float64) int {
+	// q is the lower bound for token runs (q-grams) that must exist
+	// in content that can be recognized at the specified threshold.
+	// Imagine a document with 100 tokens, and a threshold of 80%. This means
+	// that in a worst-case scenario, the 20 errors are evenly distributed to
+	// create the sortest possible token runs. In this case, there would be
+	// a repeating sequence of 4 good tokens and 1 errored token, occurring
+	// 20 times. This function returns the minimum token length, or returning
+	// a value of 1 if necessary (since a threshold level below 50% would generate
+	// a run of 0-length, which is meaningless.)
+	if threshold == 1.0 {
+		return 10 // avoid divide by 0
+	}
+
+	return max(1, int((threshold)/(1.0-threshold)))
+}
+
+func max(a, b int) int {
+	if a > b {
+		return a
+	}
+	return b
 }
 
 // AddContent incorporates the provided textual content into the corpus for matching.
@@ -76,6 +128,8 @@ func (c *Corpus) addDocument(name string, doc *document) {
 	// candidates.
 	id := c.generateIndexedDocument(doc, true)
 	id.generateFrequencies()
+	id.generateSearchSet(c.q)
+	id.s.origin = name
 	c.docs[name] = id
 }
 
@@ -131,19 +185,20 @@ func newDictionary() *dictionary {
 
 // add inserts the provided word into the dictionary if it does not already exist.
 func (d *dictionary) add(word string) tokenID {
-	if idx := d.getIndex(word); idx != -1 {
+	if idx := d.getIndex(word); idx != unknownIndex {
 		return idx
 	}
-	idx := tokenID(len(d.words))
+	// token IDs start from 1, 0 is reserved for the invalid ID
+	idx := tokenID(len(d.words) + 1)
 	d.words[idx] = word
 	d.indices[word] = idx
 	return idx
 }
 
 var unknownWord = "UNKNOWN"
-var unknownIndex = tokenID(-1)
+var unknownIndex = tokenID(0)
 
-// getIndex returns the index of the supplied word, or -1 if the word is not in the dictionary.
+// getIndex returns the index of the supplied word, or 0 if the word is not in the dictionary.
 func (d *dictionary) getIndex(word string) tokenID {
 	if idx, found := d.indices[word]; found {
 		return idx
