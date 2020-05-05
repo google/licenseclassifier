@@ -15,6 +15,7 @@
 package classifier
 
 import (
+	"fmt"
 	"testing"
 )
 
@@ -36,10 +37,10 @@ func TestDictionary(t *testing.T) {
 	if got := len(d.indices); got != 1 {
 		t.Errorf("dictionary has %d indices, expected 1", got)
 	}
-	if got := d.getIndex("hello"); got != 0 {
-		t.Errorf("dictionary index: got %d, want 0", got)
+	if got := d.getIndex("hello"); got != 1 {
+		t.Errorf("dictionary index: got %d, want 1", got)
 	}
-	if got := d.getWord(0); got != "hello" {
+	if got := d.getWord(1); got != "hello" {
 		t.Errorf("dictionary word: got %q, want %q", got, "hello")
 	}
 
@@ -52,20 +53,60 @@ func TestDictionary(t *testing.T) {
 	if got := len(d.indices); got != 1 {
 		t.Errorf("dictionary has %d indices, expected 1", got)
 	}
-	if got := d.getIndex("hello"); got != 0 {
-		t.Errorf("dictionary index: got %d, want 0", got)
+	if got := d.getIndex("hello"); got != 1 {
+		t.Errorf("dictionary index: got %d, want 1", got)
 	}
-	if got := d.getWord(0); got != "hello" {
+	if got := d.getWord(1); got != "hello" {
 		t.Errorf("dictionary word: got %q, want %q", got, "hello")
 	}
 
 	// Fetching an unknown index returns the special value
-	if got := d.getWord(1); got != unknownWord {
+	if got := d.getWord(2); got != unknownWord {
 		t.Errorf("dictionary word: got %q, want %q", got, unknownWord)
 	}
 
 	// Fetching an unknown word returns the special value
 	if got := d.getIndex("unknown"); got != unknownIndex {
 		t.Errorf("dictionary word: got %d, want %d", got, unknownIndex)
+	}
+}
+
+func TestComputeQ(t *testing.T) {
+	tests := []struct {
+		threshold float64
+		expected  int
+	}{
+		{
+			threshold: .9,
+			expected:  9,
+		},
+		{
+			threshold: .8,
+			expected:  4,
+		},
+		{
+			threshold: .67,
+			expected:  2,
+		},
+		{
+			threshold: .5,
+			expected:  1,
+		},
+		{
+			threshold: 0.0,
+			expected:  1,
+		},
+		{
+			threshold: 1.0,
+			expected:  10,
+		},
+	}
+
+	for i, test := range tests {
+		t.Run(fmt.Sprintf("threshold test %d", i), func(t *testing.T) {
+			if actual := computeQ(test.threshold); actual != test.expected {
+				t.Errorf("got %v want %v", actual, test.expected)
+			}
+		})
 	}
 }
