@@ -42,6 +42,18 @@ func TestCleanupToken(t *testing.T) {
 			input:  "12345,",
 			output: "12345",
 		},
+		{
+			input:  "12345-6789",
+			output: "12345-6789",
+		},
+		{
+			input:  "1(a)",
+			output: "1",
+		},
+		{
+			input:  "1.2.3",
+			output: "1.2.3",
+		},
 	}
 	for _, test := range tests {
 		if got := cleanupToken(test.input); got != test.output {

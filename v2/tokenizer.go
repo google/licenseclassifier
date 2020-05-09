@@ -33,19 +33,24 @@ var eol = "\n"
 
 func cleanupToken(in string) string {
 	r, _ := utf8.DecodeRuneInString(in)
+	var out strings.Builder
 	if !unicode.IsLetter(r) {
-		// TODO: consider this more thoroughly. Sample data?
-		if unicode.IsNumber(r) {
-			// For matching version numbers or large numbers, we don't
-			// want splitting commas or trailing commas to affect the results.
-			return strings.ReplaceAll(in, ",", "")
+		if unicode.IsDigit(r) {
+			// Based on analysis of the license corpus, the characters
+			// that are significant are numbers, periods, and dashes. Anything
+			// else can be safely discarded, and helps avoid matching failures
+			// due to inconsistent whitespacing and formatting.
+			for _, c := range in {
+				if unicode.IsDigit(c) || c == '.' || c == '-' {
+					out.WriteRune(c)
+				}
+			}
+			return out.String()
 		}
-		return in
 	}
 
 	// Remove internal hyphenization or URL constructs to better normalize
 	// strings for matching.
-	var out strings.Builder
 	for _, c := range in {
 		if c >= 'a' && c <= 'z' {
 			out.WriteRune(c)
@@ -250,9 +255,6 @@ func normalizeEquivalentWords(s string) string {
 
 func header(tok *token) bool {
 	in := tok.Text
-	if in == "" {
-		return false
-	}
 	p, e := in[:len(in)-1], in[len(in)-1]
 	switch e {
 	case '.', ':', ')':
