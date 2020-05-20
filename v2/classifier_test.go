@@ -18,7 +18,6 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
-	"path"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -31,45 +30,26 @@ type scenario struct {
 	data     string
 }
 
-// TODO(wcn): refactor some of this into a helper constructor for the classifier.
-func LoadLicenses(c *Corpus, dir string, t *testing.T) error {
-	var files []string
-	err := filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
-		if err != nil {
-			return nil
-		}
-		if !strings.HasSuffix(path, "txt") {
-			return nil
-		}
-		files = append(files, path)
-		return nil
-	})
-	if err != nil {
-		t.Fatalf("encountered error walking licenses directory: %v", err)
+var defaultThreshold = .8
+var baseLicenses = "./licenses"
+
+func classifier() (*Classifier, error) {
+	c := &Classifier{
+		Corpus: NewCorpus(defaultThreshold),
 	}
 
-	for _, f := range files {
-		_, name := path.Split(f)
-		name = strings.Replace(name, ".txt", "", 1)
-		b, err := ioutil.ReadFile(f)
-		if err != nil {
-			t.Fatalf("encountered error reading license file %v: %v", f, err)
-		}
-
-		c.AddContent(name, string(b))
-	}
-
-	return nil
+	return c, c.Corpus.LoadLicenses(baseLicenses)
 }
 
 func TestScenarios(t *testing.T) {
-	c := NewCorpus(.8)
-	licenseDir := "./licenses"
-	LoadLicenses(c, licenseDir, t)
+	c, err := classifier()
+	if err != nil {
+		t.Fatalf("couldn't instantiate standard test classifier: %v", err)
+	}
 
 	scenarios := "./scenarios"
 	var files []string
-	err := filepath.Walk(scenarios, func(path string, info os.FileInfo, err error) error {
+	err = filepath.Walk(scenarios, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err
 		}
@@ -125,4 +105,106 @@ func readScenario(path string) *scenario {
 	}
 	s.data = lines[1]
 	return &s
+}
+
+func TestContainsAndOverlaps(t *testing.T) {
+	tests := []struct {
+		name     string
+		a, b     *Match
+		contains bool
+		overlaps bool
+	}{
+		{
+			name: "no intersection",
+			a: &Match{
+				StartLine: 1,
+				EndLine:   3,
+			},
+			b: &Match{
+				StartLine: 4,
+				EndLine:   5,
+			},
+			contains: false,
+			overlaps: false,
+		},
+		{
+			name: "overlap at end",
+			a: &Match{
+				StartLine: 4,
+				EndLine:   10,
+			},
+			b: &Match{
+				StartLine: 1,
+				EndLine:   5,
+			},
+			contains: false,
+			overlaps: true,
+		},
+		{
+			name: "overlap at end",
+			a: &Match{
+				StartLine: 1,
+				EndLine:   10,
+			},
+			b: &Match{
+				StartLine: 4,
+				EndLine:   12,
+			},
+			contains: false,
+			overlaps: true,
+		},
+		{
+			name: "contains",
+			a: &Match{
+				StartLine: 1,
+				EndLine:   10,
+			},
+			b: &Match{
+				StartLine: 4,
+				EndLine:   7,
+			},
+			contains: true,
+			overlaps: false,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			if got := contains(test.a, test.b); got != test.contains {
+				t.Errorf("contains: got %v want %v", got, test.contains)
+			}
+			if got := overlaps(test.a, test.b); got != test.overlaps {
+				t.Errorf("overlaps: got %v want %v", got, test.overlaps)
+			}
+		})
+	}
+}
+
+func TestLicName(t *testing.T) {
+	tests := []struct {
+		name     string
+		expected string
+	}{
+		{
+			// The filename for a license
+			name:     "GPL-2.0.txt",
+			expected: "GPL-2.0",
+		},
+		{
+			// The filename for a header reference to a license
+			name:     "GPL-2.0.header.txt",
+			expected: "GPL-2.0",
+		},
+		{
+			// The filename for a variant header reference to a license
+			name:     "GPL-2.0.header_a.txt",
+			expected: "GPL-2.0",
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+
+		})
+	}
 }
