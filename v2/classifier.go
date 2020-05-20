@@ -15,6 +15,10 @@
 package classifier
 
 import (
+	"io/ioutil"
+	"os"
+	"path"
+	"path/filepath"
 	"sort"
 	"strings"
 )
@@ -148,6 +152,47 @@ func (c *Corpus) Match(in string) Matches {
 	return out
 }
 
+// Classifier provides methods for identifying open source licenses in text
+// content.
+type Classifier struct {
+	Corpus *Corpus
+}
+
+// LoadLicenses adds the contents of the supplied directory to the corpus.
+func (c *Corpus) LoadLicenses(dir string) error {
+	var files []string
+	err := filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return nil
+		}
+		if !strings.HasSuffix(path, "txt") {
+			return nil
+		}
+		files = append(files, path)
+		return nil
+	})
+	if err != nil {
+		return err
+	}
+
+	for _, f := range files {
+		_, name := path.Split(f)
+		name = strings.Replace(name, ".txt", "", 1)
+		b, err := ioutil.ReadFile(f)
+		if err != nil {
+			return err
+		}
+
+		c.AddContent(name, string(b))
+	}
+	return nil
+}
+
+// Match finds matches within an unknown text.
+func (c *Classifier) Match(in string) Matches {
+	return c.Corpus.Match(in)
+}
+
 // licName produces the output name for a license, removing the internal structure
 // of the filename in use.
 func licName(in string) string {
@@ -163,7 +208,7 @@ func licName(in string) string {
 
 // contains returns true iff b is completely inside a
 func contains(a, b *Match) bool {
-	return a.StartLine <= b.StartLine && a.EndLine >= b.StartLine
+	return a.StartLine <= b.StartLine && a.EndLine >= b.EndLine
 }
 
 // returns true iff b <= a <= c
