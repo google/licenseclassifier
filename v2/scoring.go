@@ -124,7 +124,11 @@ func scoreDiffs(diffs []diffmatchpatch.Diff) int {
 			// Changing the version number of the license isn't acceptable. Note that
 			// this doesn't cover decimal version numbers but that hasn't been a
 			// problem.
-			if _, err := strconv.Atoi(text); err == nil && strings.HasSuffix(prevText, "version") {
+			num := text
+			if i := strings.Index(num, " "); i != -1 {
+				num = num[0:i]
+			}
+			if _, err := strconv.Atoi(num); err == nil && strings.HasSuffix(prevText, "version") {
 				if !strings.HasSuffix(prevText, "the standard version") && !strings.HasSuffix(prevText, "the contributor version") {
 					return versionChange
 				}
