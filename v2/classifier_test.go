@@ -19,6 +19,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 	"testing"
 
@@ -68,14 +69,27 @@ func TestScenarios(t *testing.T) {
 		s := readScenario(f)
 
 		m := c.Match(s.data)
-		if len(m) != len(s.expected) {
-			t.Errorf("Match(%q) number matches: %v, want %v: %v", f, len(m), len(s.expected), spew.Sdump(m))
+
+		found := make(map[string]bool)
+		// Uniquify the licenses found
+		for _, l := range m {
+			found[l.Name] = true
+		}
+
+		var names []string
+		for l := range found {
+			names = append(names, l)
+		}
+		sort.Strings(names)
+
+		if len(names) != len(s.expected) {
+			t.Errorf("Match(%q) number matches: %v, want %v: %v", f, len(names), len(s.expected), spew.Sdump(m))
 			continue
 		}
 
-		for i := 0; i < len(m); i++ {
-			w := s.expected[i]
-			if got, want := m[i].Name, w; got != want {
+		for i := 0; i < len(names); i++ {
+			w := strings.TrimSpace(s.expected[i])
+			if got, want := names[i], w; got != want {
 				t.Errorf("Match(%q) = %q, want %q", f, got, want)
 			}
 		}
