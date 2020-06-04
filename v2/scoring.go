@@ -121,14 +121,11 @@ func scoreDiffs(diffs []diffmatchpatch.Diff) int {
 		text := strings.TrimSpace(diff.Text)
 		switch diff.Type {
 		case diffmatchpatch.DiffInsert:
-			// Changing the version number of the license isn't acceptable. Note that
-			// this doesn't cover decimal version numbers but that hasn't been a
-			// problem.
 			num := text
 			if i := strings.Index(num, " "); i != -1 {
 				num = num[0:i]
 			}
-			if _, err := strconv.Atoi(num); err == nil && strings.HasSuffix(prevText, "version") {
+			if _, err := strconv.ParseFloat(num, 32); err == nil && strings.HasSuffix(prevText, "version") {
 				if !strings.HasSuffix(prevText, "the standard version") && !strings.HasSuffix(prevText, "the contributor version") {
 					return versionChange
 				}
@@ -138,7 +135,7 @@ func scoreDiffs(diffs []diffmatchpatch.Diff) int {
 			// these are words or phrases that appear in a single/small number of
 			// licenses. Can we leverage frequency analysis to identify these
 			// interesting words/phrases and auto-extract them?
-			for _, p := range []string{"autoconf exception", "class path exception", "gcc linking exception", "bison exception", "font exception", "imagemagick", "x consortium"} {
+			for _, p := range []string{"autoconf exception", "class path exception", "gcc linking exception", "bison exception", "font exception", "imagemagick", "x consortium", "apache", "bsd"} {
 				if strings.Index(text, p) != -1 {
 					return introducedPhraseChange
 				}

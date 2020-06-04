@@ -220,6 +220,7 @@ var interchangeableWords = []struct {
 	{regexp.MustCompile("favourite"), "favorite"},
 	{regexp.MustCompile("fulfil\\b"), "fulfill"},
 	{regexp.MustCompile("fulfilment"), "fulfillment"},
+	{regexp.MustCompile("https"), "http"},
 	{regexp.MustCompile("initialise"), "initialize"},
 	{regexp.MustCompile("judgment"), "judgement"},
 	{regexp.MustCompile("labelling"), "labeling"},
