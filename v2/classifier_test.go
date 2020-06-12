@@ -214,11 +214,27 @@ func TestLicName(t *testing.T) {
 			name:     "GPL-2.0.header_a.txt",
 			expected: "GPL-2.0",
 		},
+		{
+			// The filename for a variant license body
+			name:     "Apache-2.0_no_toc.txt",
+			expected: "Apache-2.0",
+		},
 	}
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 
 		})
+	}
+}
+
+func TestTrimExtraneousText(t *testing.T) {
+	in := `Sample text
+END OF TERMS AND CONDITIONS
+Extra text is here`
+
+	expected := "Sample text\nEND OF TERMS AND CONDITIONS"
+	if got := trimExtraneousTrailingText(in); got != expected {
+		t.Errorf("trimExtraneousTrailingText: got %q want %q", got, expected)
 	}
 }

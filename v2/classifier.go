@@ -183,7 +183,8 @@ func (c *Corpus) LoadLicenses(dir string) error {
 			return err
 		}
 
-		c.AddContent(name, string(b))
+		content := trimExtraneousTrailingText(string(b))
+		c.AddContent(name, content)
 	}
 	return nil
 }
@@ -198,6 +199,9 @@ func (c *Classifier) Match(in string) Matches {
 func licName(in string) string {
 	out := in
 	if idx := strings.Index(in, ".txt"); idx != -1 {
+		out = out[0:idx]
+	}
+	if idx := strings.Index(in, "_"); idx != -1 {
 		out = out[0:idx]
 	}
 	if idx := strings.Index(in, ".header"); idx != -1 {
@@ -219,4 +223,21 @@ func between(a, b, c int) bool {
 // returns true iff the ranges covered by a and b overlap.
 func overlaps(a, b *Match) bool {
 	return between(a.StartLine, b.StartLine, b.EndLine) || between(a.EndLine, b.StartLine, b.EndLine)
+}
+
+// endOfLicenseText is text commonly associated with the end of a license. We
+// can remove text that occurs after it.
+var endOfLicenseText = []string{
+	"END OF TERMS AND CONDITIONS",
+}
+
+// trimExtraneousTrailingText removes text after an obvious end of the license
+// and does not include substantive text of the license.
+func trimExtraneousTrailingText(s string) string {
+	for _, e := range endOfLicenseText {
+		if i := strings.LastIndex(s, e); i != -1 {
+			return s[:i+len(e)]
+		}
+	}
+	return s
 }
