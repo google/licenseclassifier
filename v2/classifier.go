@@ -83,7 +83,7 @@ func (c *Corpus) Match(in string) Matches {
 			if conf >= c.threshold && (endIndex-startIndex-startOffset-endOffset) > 0 {
 				candidates = append(candidates, &Match{
 					Name:            licName(l),
-					MatchType:       "Text",
+					MatchType:       detectionType(l),
 					Confidence:      conf,
 					StartLine:       id.Tokens[startIndex+startOffset].Line,
 					EndLine:         id.Tokens[endIndex-endOffset-1].Line,
@@ -198,6 +198,13 @@ func (c *Corpus) LoadLicenses(dir string) error {
 // Match finds matches within an unknown text.
 func (c *Classifier) Match(in string) Matches {
 	return c.Corpus.Match(in)
+}
+
+func detectionType(in string) string {
+	if strings.Index(in, ".header") != -1 {
+		return "Header"
+	}
+	return "License"
 }
 
 // licName produces the output name for a license, removing the internal structure
