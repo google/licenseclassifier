@@ -125,9 +125,15 @@ func (c *Corpus) Match(in string) Matches {
 
 				ctoks := float64(c.EndTokenIndex - c.StartTokenIndex)
 				otoks := float64(o.EndTokenIndex - o.StartTokenIndex)
-				if ctoks*c.Confidence > otoks*o.Confidence {
+				cconf := ctoks * c.Confidence
+				oconf := otoks * o.Confidence
+
+				// If the two licenses are exactly the same confidence, that means we
+				// have an ambiguous detect and should retain both, so the caller can
+				// see and resolve the situation.
+				if cconf > oconf {
 					proposals[j] = false
-				} else {
+				} else if oconf > cconf {
 					keep = false
 				}
 			} else if overlaps(c, o) && retain[j] {
