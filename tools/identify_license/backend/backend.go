@@ -78,8 +78,8 @@ func (b *ClassifierBackend) ClassifyLicenses(filenames []string, headers bool) (
 	var wg sync.WaitGroup
 	analyze := func(filename string) {
 		defer func() {
-			wg.Done()
 			task <- true
+			wg.Done()
 		}()
 		if err := b.classifyLicense(filename, headers); err != nil {
 			errs <- err
