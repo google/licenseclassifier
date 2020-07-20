@@ -106,7 +106,7 @@ func TestScoreDiffs(t *testing.T) {
 			diffs: []diffmatchpatch.Diff{
 				diffmatchpatch.Diff{
 					Type: diffmatchpatch.DiffEqual,
-					Text: "license ",
+					Text: "license",
 				},
 				diffmatchpatch.Diff{
 					Type: diffmatchpatch.DiffInsert,
@@ -124,11 +124,11 @@ func TestScoreDiffs(t *testing.T) {
 			diffs: []diffmatchpatch.Diff{
 				diffmatchpatch.Diff{
 					Type: diffmatchpatch.DiffEqual,
-					Text: "version ",
+					Text: "version",
 				},
 				diffmatchpatch.Diff{
 					Type: diffmatchpatch.DiffInsert,
-					Text: "2 ",
+					Text: "2",
 				},
 			},
 			expected: versionChange,
@@ -138,11 +138,11 @@ func TestScoreDiffs(t *testing.T) {
 			diffs: []diffmatchpatch.Diff{
 				diffmatchpatch.Diff{
 					Type: diffmatchpatch.DiffEqual,
-					Text: "gnu ",
+					Text: "gnu",
 				},
 				diffmatchpatch.Diff{
 					Type: diffmatchpatch.DiffDelete,
-					Text: "lesser ",
+					Text: "lesser",
 				},
 			},
 			expected: lesserGPLChange,
@@ -152,11 +152,11 @@ func TestScoreDiffs(t *testing.T) {
 			diffs: []diffmatchpatch.Diff{
 				diffmatchpatch.Diff{
 					Type: diffmatchpatch.DiffEqual,
-					Text: "gnu ",
+					Text: "gnu",
 				},
 				diffmatchpatch.Diff{
 					Type: diffmatchpatch.DiffInsert,
-					Text: "lesser ",
+					Text: "lesser",
 				},
 			},
 			expected: lesserGPLChange,
@@ -166,11 +166,11 @@ func TestScoreDiffs(t *testing.T) {
 			diffs: []diffmatchpatch.Diff{
 				diffmatchpatch.Diff{
 					Type: diffmatchpatch.DiffEqual,
-					Text: "license ",
+					Text: "license",
 				},
 				diffmatchpatch.Diff{
 					Type: diffmatchpatch.DiffInsert,
-					Text: "imagemagick ",
+					Text: "imagemagick",
 				},
 			},
 			expected: introducedPhraseChange,

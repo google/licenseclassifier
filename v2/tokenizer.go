@@ -203,7 +203,7 @@ var interchangeableWords = []struct {
 	interchangeable *regexp.Regexp
 	substitute      string
 }{
-	{regexp.MustCompile("acknowledgment"), "acknowledgement"},
+	{regexp.MustCompile("acknowledgement"), "acknowledgment"},
 	{regexp.MustCompile("analogue"), "analog"},
 	{regexp.MustCompile("analyse"), "analyze"},
 	{regexp.MustCompile("artefact"), "artifact"},
@@ -298,6 +298,7 @@ var ignorableTexts = []*regexp.Regexp{
 	regexp.MustCompile(`(?i)^(?:new )?bsd license$`),
 	regexp.MustCompile(`(?i)^copyright and permission notice$`),
 	regexp.MustCompile(`^(.{1,5})?copyright (\(c\) )?(\[yyyy\]|\d{4})[,.]?.*$`),
+	regexp.MustCompile(`^(.{1,5})?copyright \(c\) \[dates of first publication\].*$`),
 	regexp.MustCompile(`^\d{4}-(\d{2}|[a-z]{3})-\d{2}$`),
 	regexp.MustCompile(`^\d{4}-[a-z]{3}-\d{2}$`),
 	regexp.MustCompile(`(?i)^(all|some) rights reserved\.?$`),
