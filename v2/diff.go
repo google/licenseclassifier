@@ -77,12 +77,12 @@ func diffWordsToRunes(doc *indexedDocument, start, end int) []rune {
 func diffRunesToWords(diffs []diffmatchpatch.Diff, dict *dictionary) []diffmatchpatch.Diff {
 	hydrated := make([]diffmatchpatch.Diff, 0, len(diffs))
 	for _, aDiff := range diffs {
-		chars := aDiff.Text
+		chars := []rune(aDiff.Text)
 		var sb strings.Builder
 
 		for i, r := range chars {
 			sb.WriteString(dict.getWord(tokenID(r)))
-			if (i + 1) != len(chars) {
+			if (i + 1) < len(chars) {
 				sb.WriteByte(' ')
 			}
 		}

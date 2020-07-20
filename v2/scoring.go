@@ -118,7 +118,7 @@ func scoreDiffs(diffs []diffmatchpatch.Diff) int {
 	prevText := ""
 	prevDelete := ""
 	for _, diff := range diffs {
-		text := strings.TrimSpace(diff.Text)
+		text := diff.Text
 		switch diff.Type {
 		case diffmatchpatch.DiffInsert:
 			num := text
@@ -135,7 +135,23 @@ func scoreDiffs(diffs []diffmatchpatch.Diff) int {
 			// these are words or phrases that appear in a single/small number of
 			// licenses. Can we leverage frequency analysis to identify these
 			// interesting words/phrases and auto-extract them?
-			for _, p := range []string{"autoconf exception", "class path exception", "gcc linking exception", "bison exception", "font exception", "imagemagick", "x consortium", "apache", "bsd", "affero", "sun standards"} {
+			for _, p := range []string{
+				"autoconf exception",
+				"class path exception",
+				"gcc linking exception",
+				"bison exception",
+				"font exception",
+				"imagemagick",
+				"x consortium",
+				"apache",
+				"bsd",
+				"affero",
+				"sun standards",
+				"silicon graphics",
+				"php",
+				"acknowledgment",
+				"atmel",
+			} {
 				if strings.Index(text, p) != -1 {
 					return introducedPhraseChange
 				}
