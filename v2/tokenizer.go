@@ -72,15 +72,21 @@ func tokenize(in string) *document {
 	var doc document
 	// Iterate on a line-by-line basis.
 
-	lines := strings.Split(norm, "\n")
-	for i, line := range lines {
+	line := norm
+	i := 0
+	pos := 0
+	for {
 		// Scan the line for the first likely textual content. The scan ignores punctuation
 		// artifacts that include visual boxes for layout as well as comment characters in
 		// source files.
-		pos := 0
 		firstInLine := true
 		var wid int
 		var r rune
+
+		if pos == len(line) {
+			break
+		}
+
 		next := func() {
 			r, wid = utf8.DecodeRuneInString(line[pos:])
 			pos += wid
@@ -89,6 +95,13 @@ func tokenize(in string) *document {
 		for pos < len(line) {
 			start := pos
 			next()
+
+			if r == '\n' {
+				doc.Tokens = append(doc.Tokens, &token{
+					Text: eol,
+					Line: i + 1})
+				i++
+			}
 
 			if !isSignificant(r) {
 				continue
@@ -104,6 +117,16 @@ func tokenize(in string) *document {
 			}
 
 			if pos > start {
+				if start >= 2 && line[start-2] == '.' && line[start-1] == ' ' {
+					// Insert a "soft EOL" that helps detect header-looking entries that
+					// follow this text. This resolves problems with licenses that are a
+					// very long line of text, motivated by
+					// https://github.com/microsoft/TypeScript/commit/6e6e570d57b6785335668e30b63712e41f89bf74#diff-e60c8cd1bc09b7c4e1bf79c769c9c120L109
+					doc.Tokens = append(doc.Tokens, &token{
+						Text: eol,
+						Line: i + 1})
+				}
+
 				tok := token{
 					Text: line[start:pos],
 					Line: i + 1,
