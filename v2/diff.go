@@ -46,10 +46,8 @@ func diffRange(known string, diffs []diffmatchpatch.Diff) (start, end int) {
 }
 
 func docDiff(id string, doc1 *indexedDocument, doc1Start, doc1End int, doc2 *indexedDocument, doc2Start, doc2End int) []diffmatchpatch.Diff {
-	// Convert the string representation into runes that the diffmatchpatch
-	// algorithm can then diff using its rune-based algorithm.
-	chars1 := diffWordsToRunes(doc1, doc1Start, doc1End)
-	chars2 := diffWordsToRunes(doc2, doc2Start, doc2End)
+	chars1 := doc1.runes[doc1Start:doc1End]
+	chars2 := doc2.runes[doc2Start:doc2End]
 
 	dmp := diffmatchpatch.New()
 	diffs := dmp.DiffMainRunes(chars1, chars2, false)

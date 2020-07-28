@@ -37,10 +37,10 @@ func score(id string, unknown, known *indexedDocument, unknownStart, unknownEnd 
 		Trace("Scoring %s: [%d-%d]\n", known.s.origin, unknownStart, unknownEnd)
 	}
 
-	knownLength := len(known.Tokens)
-	diffs := docDiff(id, unknown, unknownStart, unknownEnd, known, 0, len(known.Tokens))
+	knownLength := known.size()
+	diffs := docDiff(id, unknown, unknownStart, unknownEnd, known, 0, knownLength)
 
-	start, end := diffRange(known.normalized(), diffs)
+	start, end := diffRange(known.norm, diffs)
 	distance := scoreDiffs(diffs[start:end])
 	if distance < 0 {
 		// If the distance is negative, this indicates an unacceptable diff so we return a zero-confidence match.
