@@ -82,7 +82,7 @@ func (c *Corpus) Match(in string) Matches {
 			conf, startOffset, endOffset := score(l, id, d, startIndex, endIndex)
 			if conf >= c.threshold && (endIndex-startIndex-startOffset-endOffset) > 0 {
 				candidates = append(candidates, &Match{
-					Name:            licName(l),
+					Name:            LicenseName(l),
 					MatchType:       detectionType(l),
 					Confidence:      conf,
 					StartLine:       id.Tokens[startIndex+startOffset].Line,
@@ -207,9 +207,9 @@ func detectionType(in string) string {
 	return "License"
 }
 
-// licName produces the output name for a license, removing the internal structure
+// LicenseName produces the output name for a license, removing the internal structure
 // of the filename in use.
-func licName(in string) string {
+func LicenseName(in string) string {
 	out := in
 	if idx := strings.Index(in, ".txt"); idx != -1 {
 		out = out[0:idx]
