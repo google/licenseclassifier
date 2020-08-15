@@ -233,7 +233,7 @@ func TestTrimExtraneousText(t *testing.T) {
 END OF TERMS AND CONDITIONS
 Extra text is here`
 
-	expected := "Sample text\nEND OF TERMS AND CONDITIONS"
+	expected := "Sample text\n"
 	if got := trimExtraneousTrailingText(in); got != expected {
 		t.Errorf("trimExtraneousTrailingText: got %q want %q", got, expected)
 	}
