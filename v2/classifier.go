@@ -239,7 +239,7 @@ func overlaps(a, b *Match) bool {
 }
 
 // endOfLicenseText is text commonly associated with the end of a license. We
-// can remove text that occurs after it.
+// can remove text that occurs after it as well as the marker itself.
 var endOfLicenseText = []string{
 	"END OF TERMS AND CONDITIONS",
 }
@@ -249,7 +249,7 @@ var endOfLicenseText = []string{
 func trimExtraneousTrailingText(s string) string {
 	for _, e := range endOfLicenseText {
 		if i := strings.LastIndex(s, e); i != -1 {
-			return s[:i+len(e)]
+			return s[:i]
 		}
 	}
 	return s
