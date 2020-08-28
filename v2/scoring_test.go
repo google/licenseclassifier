@@ -29,7 +29,7 @@ func TestLevenshteinDiff(t *testing.T) {
 		{
 			name: "identical text",
 			diffs: []diffmatchpatch.Diff{
-				diffmatchpatch.Diff{
+				{
 					Type: diffmatchpatch.DiffEqual,
 					Text: "equivalent text",
 				},
@@ -40,11 +40,11 @@ func TestLevenshteinDiff(t *testing.T) {
 			name: "changed text",
 			// Adjacent inverse changes get scored with the maximum of the 2 change scores
 			diffs: []diffmatchpatch.Diff{
-				diffmatchpatch.Diff{
+				{
 					Type: diffmatchpatch.DiffDelete,
 					Text: "removed words",
 				},
-				diffmatchpatch.Diff{
+				{
 					Type: diffmatchpatch.DiffInsert,
 					Text: "inserted text here",
 				},
@@ -54,11 +54,11 @@ func TestLevenshteinDiff(t *testing.T) {
 		{
 			name: "inserted text",
 			diffs: []diffmatchpatch.Diff{
-				diffmatchpatch.Diff{
+				{
 					Type: diffmatchpatch.DiffEqual,
 					Text: "identical words",
 				},
-				diffmatchpatch.Diff{
+				{
 					Type: diffmatchpatch.DiffInsert,
 					Text: "inserted",
 				},
@@ -68,11 +68,11 @@ func TestLevenshteinDiff(t *testing.T) {
 		{
 			name: "deleted text",
 			diffs: []diffmatchpatch.Diff{
-				diffmatchpatch.Diff{
+				{
 					Type: diffmatchpatch.DiffDelete,
 					Text: "many extraneous deleted words",
 				},
-				diffmatchpatch.Diff{
+				{
 					Type: diffmatchpatch.DiffEqual,
 					Text: "before the equivalent text",
 				},
@@ -104,15 +104,15 @@ func TestScoreDiffs(t *testing.T) {
 		{
 			name: "acceptable change",
 			diffs: []diffmatchpatch.Diff{
-				diffmatchpatch.Diff{
+				{
 					Type: diffmatchpatch.DiffEqual,
 					Text: "license",
 				},
-				diffmatchpatch.Diff{
+				{
 					Type: diffmatchpatch.DiffInsert,
 					Text: "as needed",
 				},
-				diffmatchpatch.Diff{
+				{
 					Type: diffmatchpatch.DiffDelete,
 					Text: "when necessary",
 				},
@@ -122,11 +122,11 @@ func TestScoreDiffs(t *testing.T) {
 		{
 			name: "version change",
 			diffs: []diffmatchpatch.Diff{
-				diffmatchpatch.Diff{
+				{
 					Type: diffmatchpatch.DiffEqual,
 					Text: "version",
 				},
-				diffmatchpatch.Diff{
+				{
 					Type: diffmatchpatch.DiffInsert,
 					Text: "2",
 				},
@@ -136,11 +136,11 @@ func TestScoreDiffs(t *testing.T) {
 		{
 			name: "license name change by deletion",
 			diffs: []diffmatchpatch.Diff{
-				diffmatchpatch.Diff{
+				{
 					Type: diffmatchpatch.DiffEqual,
 					Text: "gnu",
 				},
-				diffmatchpatch.Diff{
+				{
 					Type: diffmatchpatch.DiffDelete,
 					Text: "lesser",
 				},
@@ -150,11 +150,11 @@ func TestScoreDiffs(t *testing.T) {
 		{
 			name: "license name change by insertion",
 			diffs: []diffmatchpatch.Diff{
-				diffmatchpatch.Diff{
+				{
 					Type: diffmatchpatch.DiffEqual,
 					Text: "gnu",
 				},
-				diffmatchpatch.Diff{
+				{
 					Type: diffmatchpatch.DiffInsert,
 					Text: "lesser",
 				},
@@ -164,11 +164,11 @@ func TestScoreDiffs(t *testing.T) {
 		{
 			name: "license name change by name insertion",
 			diffs: []diffmatchpatch.Diff{
-				diffmatchpatch.Diff{
+				{
 					Type: diffmatchpatch.DiffEqual,
 					Text: "license",
 				},
-				diffmatchpatch.Diff{
+				{
 					Type: diffmatchpatch.DiffInsert,
 					Text: "imagemagick",
 				},
