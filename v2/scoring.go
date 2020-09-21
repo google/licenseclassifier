@@ -32,20 +32,20 @@ const (
 // score computes a metric of similarity between the known and unknown
 // document, including the offsets into the unknown that yield the content
 // generating the computed similarity.
-func score(id string, unknown, known *indexedDocument, unknownStart, unknownEnd int) (float64, int, int) {
-	if traceScoring(known.s.origin) {
-		Trace("Scoring %s: [%d-%d]\n", known.s.origin, unknownStart, unknownEnd)
+func (c *Classifier) score(id string, unknown, known *indexedDocument, unknownStart, unknownEnd int) (float64, int, int) {
+	if c.tc.traceScoring(known.s.origin) {
+		c.tc.trace("Scoring %s: [%d-%d]", known.s.origin, unknownStart, unknownEnd)
 	}
 
 	knownLength := known.size()
 	diffs := docDiff(id, unknown, unknownStart, unknownEnd, known, 0, knownLength)
 
 	start, end := diffRange(known.norm, diffs)
-	distance := scoreDiffs(diffs[start:end])
+	distance := scoreDiffs(id, diffs[start:end])
 	if distance < 0 {
 		// If the distance is negative, this indicates an unacceptable diff so we return a zero-confidence match.
-		if traceScoring(known.s.origin) {
-			Trace("Distance result %v, rejected match", distance)
+		if c.tc.traceScoring(known.s.origin) {
+			c.tc.trace("Distance result %v, rejected match", distance)
 		}
 		return 0.0, 0, 0
 	}
@@ -64,8 +64,8 @@ func score(id string, unknown, known *indexedDocument, unknownStart, unknownEnd 
 	// target.
 	conf, so, eo := confidencePercentage(knownLength, distance), textLength(diffs[:start]), textLength(diffs[end:])
 
-	if traceScoring(known.s.origin) {
-		Trace("Score result: %v [%d-%d]\n", conf, so, eo)
+	if c.tc.traceScoring(known.s.origin) {
+		c.tc.trace("Score result: %v [%d-%d]", conf, so, eo)
 	}
 	return conf, so, eo
 }
@@ -110,7 +110,7 @@ func diffLevenshteinWord(diffs []diffmatchpatch.Diff) int {
 // negative value means that the changes represented by the diff are not an
 // acceptable transformation since it would change the underlying license.  A
 // positive value indicates the Levenshtein word distance.
-func scoreDiffs(diffs []diffmatchpatch.Diff) int {
+func scoreDiffs(id string, diffs []diffmatchpatch.Diff) int {
 	// We make a pass looking for unacceptable substitutions
 	// Delete diffs are always ordered before insert diffs. This is leveraged to
 	// analyze a change by checking an insert against the delete text that was
@@ -135,25 +135,33 @@ func scoreDiffs(diffs []diffmatchpatch.Diff) int {
 			// these are words or phrases that appear in a single/small number of
 			// licenses. Can we leverage frequency analysis to identify these
 			// interesting words/phrases and auto-extract them?
-			for _, p := range []string{
-				"autoconf exception",
-				"class path exception",
-				"gcc linking exception",
-				"bison exception",
-				"font exception",
-				"imagemagick",
-				"x consortium",
-				"apache",
-				"bsd",
-				"affero",
-				"sun standards",
-				"silicon graphics",
-				"php",
-				"acknowledgment",
-				"atmel",
-			} {
-				if strings.Index(text, p) != -1 {
-					return introducedPhraseChange
+
+			inducedPhrases := map[string][]string{
+				"AGPL":                             {"affero"},
+				"Atmel":                            {"atmel"},
+				"Apache":                           {"apache"},
+				"BSD":                              {"bsd"},
+				"BSD-3-Clause-Attribution":         {"acknowledgment"},
+				"GPL-2.0-with-GCC-exception":       {"gcc linking exception"},
+				"GPL-2.0-with-autoconf-exception":  {"autoconf exception"},
+				"GPL-2.0-with-bison-exception":     {"bison exception"},
+				"GPL-2.0-with-classpath-exception": {"class path exception"},
+				"GPL-2.0-with-font-exception":      {"font exception"},
+				"LGPL-2.0":                         {"library"},
+				"ImageMagick":                      {"imagemagick"},
+				"PHP":                              {"php"},
+				"SISSL":                            {"sun standards"},
+				"SGI-B":                            {"silicon graphics"},
+				"X11":                              {"x consortium"},
+			}
+
+			for k, ps := range inducedPhrases {
+				if strings.HasPrefix(id, k) {
+					for _, p := range ps {
+						if strings.Index(text, p) != -1 {
+							return introducedPhraseChange
+						}
+					}
 				}
 			}
 

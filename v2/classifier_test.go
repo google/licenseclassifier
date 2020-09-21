@@ -35,11 +35,8 @@ var defaultThreshold = .8
 var baseLicenses = "./licenses"
 
 func classifier() (*Classifier, error) {
-	c := &Classifier{
-		Corpus: NewCorpus(defaultThreshold),
-	}
-
-	return c, c.Corpus.LoadLicenses(baseLicenses)
+	c := NewClassifier(defaultThreshold)
+	return c, c.LoadLicenses(baseLicenses)
 }
 
 func TestScenarios(t *testing.T) {

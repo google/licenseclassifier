@@ -71,28 +71,6 @@ func (d *indexedDocument) normalized() string {
 	return w.String()
 }
 
-// Corpus is a collection of documents with a shared dictionary. Matching occurs
-// within all documents in the corpus.
-// TODO: This type may not be public in the long-term. I need to write the A/B classifier
-// facade and see how it best works out.
-type Corpus struct {
-	dict      *dictionary
-	docs      map[string]*indexedDocument
-	threshold float64
-	q         int // The value of q for q-grams in this corpus
-}
-
-// NewCorpus creates an empty corpus.
-func NewCorpus(threshold float64) *Corpus {
-	corpus := &Corpus{
-		dict:      newDictionary(),
-		docs:      make(map[string]*indexedDocument),
-		threshold: threshold,
-		q:         computeQ(threshold),
-	}
-	return corpus
-}
-
 func computeQ(threshold float64) int {
 	// q is the lower bound for token runs (q-grams) that must exist
 	// in content that can be recognized at the specified threshold.
@@ -117,14 +95,14 @@ func max(a, b int) int {
 	return b
 }
 
-// AddContent incorporates the provided textual content into the corpus for matching.
-func (c *Corpus) AddContent(name, content string) {
+// AddContent incorporates the provided textual content into the classifier for matching.
+func (c *Classifier) AddContent(name, content string) {
 	doc := tokenize(content)
 	c.addDocument(name, doc)
 }
 
-// addDocument takes a textual document and incorporates it into the corpus for matching.
-func (c *Corpus) addDocument(name string, doc *document) {
+// addDocument takes a textual document and incorporates it into the classifier for matching.
+func (c *Classifier) addDocument(name string, doc *document) {
 	// For documents that are part of the corpus, we add them to the dictionary and
 	// compute their associated search data eagerly so they are ready for matching against
 	// candidates.
@@ -136,8 +114,8 @@ func (c *Corpus) addDocument(name string, doc *document) {
 }
 
 // generateIndexedDocument creates an indexedDocument from the supplied document. if addWords
-// is true, the corpus dictionary is updated with new tokens encountered in the document.
-func (c *Corpus) generateIndexedDocument(d *document, addWords bool) *indexedDocument {
+// is true, the classifier dictionary is updated with new tokens encountered in the document.
+func (c *Classifier) generateIndexedDocument(d *document, addWords bool) *indexedDocument {
 	id := &indexedDocument{
 		Tokens: make([]indexedToken, 0, len(d.Tokens)),
 		dict:   c.dict,
@@ -165,9 +143,9 @@ func (c *Corpus) generateIndexedDocument(d *document, addWords bool) *indexedDoc
 }
 
 // createTargetIndexedDocument creates an indexed document without adding the
-// words to the corpus dictionary. This should be used for matching targets, not
+// words to the classifier dictionary. This should be used for matching targets, not
 // populating the corpus.
-func (c *Corpus) createTargetIndexedDocument(in string) *indexedDocument {
+func (c *Classifier) createTargetIndexedDocument(in string) *indexedDocument {
 	doc := tokenize(in)
 	return c.generateIndexedDocument(doc, false)
 }

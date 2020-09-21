@@ -44,10 +44,10 @@ func TestTokenSimilarity(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			corpus := NewCorpus(.8) // This value doesn't affect the test.
-			corpus.AddContent("b", test.b)
-			a := corpus.createTargetIndexedDocument(test.a)
-			if actual := a.tokenSimilarity(corpus.docs["b"]); actual != test.sim {
+			c := NewClassifier(.8) // This value doesn't affect the test.
+			c.AddContent("b", test.b)
+			a := c.createTargetIndexedDocument(test.a)
+			if actual := a.tokenSimilarity(c.docs["b"]); actual != test.sim {
 				t.Errorf("got %v want %v", actual, test.sim)
 			}
 		})
