@@ -55,7 +55,7 @@ func (d Matches) Less(i, j int) bool {
 }
 
 // Match reports instances of the supplied content in the corpus.
-func (c *Corpus) Match(in string) Matches {
+func (c *Classifier) match(in string) Matches {
 	id := c.createTargetIndexedDocument(in)
 
 	firstPass := make(map[string]*indexedDocument)
@@ -75,11 +75,11 @@ func (c *Corpus) Match(in string) Matches {
 
 	var candidates Matches
 	for l, d := range firstPass {
-		matches := findPotentialMatches(d.s, id.s, c.threshold)
+		matches := c.findPotentialMatches(d.s, id.s, c.threshold)
 		for _, m := range matches {
 			startIndex := m.TargetStart
 			endIndex := m.TargetEnd
-			conf, startOffset, endOffset := score(l, id, d, startIndex, endIndex)
+			conf, startOffset, endOffset := c.score(l, id, d, startIndex, endIndex)
 			if conf >= c.threshold && (endIndex-startIndex-startOffset-endOffset) > 0 {
 				candidates = append(candidates, &Match{
 					Name:            LicenseName(l),
@@ -161,11 +161,28 @@ func (c *Corpus) Match(in string) Matches {
 // Classifier provides methods for identifying open source licenses in text
 // content.
 type Classifier struct {
-	Corpus *Corpus
+	tc        *TraceConfiguration
+	dict      *dictionary
+	docs      map[string]*indexedDocument
+	threshold float64
+	q         int // The value of q for q-grams in this corpus
 }
 
-// LoadLicenses adds the contents of the supplied directory to the corpus.
-func (c *Corpus) LoadLicenses(dir string) error {
+// NewClassifier creates a classifier with an empty corpus.
+func NewClassifier(threshold float64) *Classifier {
+	classifier := &Classifier{
+		tc:        new(TraceConfiguration),
+		dict:      newDictionary(),
+		docs:      make(map[string]*indexedDocument),
+		threshold: threshold,
+		q:         computeQ(threshold),
+	}
+	return classifier
+}
+
+// LoadLicenses adds the contents of the supplied directory to the corpus of the
+// classifier.
+func (c *Classifier) LoadLicenses(dir string) error {
 	var files []string
 	err := filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
@@ -195,9 +212,15 @@ func (c *Corpus) LoadLicenses(dir string) error {
 	return nil
 }
 
+// SetTraceConfiguration installs a tracing configuration for the classifier.
+func (c *Classifier) SetTraceConfiguration(in *TraceConfiguration) {
+	c.tc = in
+	c.tc.init()
+}
+
 // Match finds matches within an unknown text.
 func (c *Classifier) Match(in string) Matches {
-	return c.Corpus.Match(in)
+	return c.match(in)
 }
 
 func detectionType(in string) string {

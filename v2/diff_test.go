@@ -269,7 +269,7 @@ func TestDiffing(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			c := NewCorpus(.8)
+			c := NewClassifier(.8)
 			c.AddContent("known", test.known)
 			kd := c.docs["known"]
 			ud := c.createTargetIndexedDocument(test.unknown)

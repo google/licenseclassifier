@@ -15,33 +15,45 @@
 package classifier
 
 import (
-	"flag"
 	"fmt"
 	"strings"
 )
 
 // This file contains routines for a simple trace execution mechanism.
-//
-// The constant map lookups do incur some overhead and could be optimized. One possible approach
-// would be to sample the values at the time Match() is called and then store the results in a cached
-// format. This would have to be done in a threadsafe manner.
-var traceLicensesFlag = flag.String("trace_licenses", "", "comma-separated list of licenses for tracing")
-var tracePhasesFlag = flag.String("trace_phases", "", "comma-separated list of licenses for tracing")
 
-func initTrace() {
-	// Sample the command line flags and set the tracing variables
-	traceLicenses = make(map[string]bool)
-	tracePhases = make(map[string]bool)
+// TraceConfiguration specifies the configuration for tracing execution of the
+// license classifier.
+type TraceConfiguration struct {
+	// Comma-separated list of phases to be traced. Can use * for all phases.
+	TracePhases string
+	// Comma-separated list of licenses to be traced. Can use * as a suffix to
+	// match prefixes, or by itself to match all licenses.
+	TraceLicenses string
 
-	if len(*traceLicensesFlag) > 0 {
-		for _, lic := range strings.Split(*traceLicensesFlag, ",") {
-			traceLicenses[lic] = true
+	// Tracer specifies a TraceFunc used to capture tracing information.
+	// If not supplied, emits using fmt.Printf
+	Tracer        TraceFunc
+	tracePhases   map[string]bool
+	traceLicenses map[string]bool
+}
+
+func (t *TraceConfiguration) init() {
+	if t == nil {
+		return
+	}
+	// Sample the config values to create the lookup maps
+	t.traceLicenses = make(map[string]bool)
+	t.tracePhases = make(map[string]bool)
+
+	if len(t.TraceLicenses) > 0 {
+		for _, lic := range strings.Split(t.TraceLicenses, ",") {
+			t.traceLicenses[lic] = true
 		}
 	}
 
-	if len(*tracePhasesFlag) > 0 {
-		for _, phase := range strings.Split(*tracePhasesFlag, ",") {
-			tracePhases[phase] = true
+	if len(t.TracePhases) > 0 {
+		for _, phase := range strings.Split(t.TracePhases, ",") {
+			t.tracePhases[phase] = true
 		}
 	}
 }
@@ -49,32 +61,61 @@ func initTrace() {
 var traceLicenses map[string]bool
 var tracePhases map[string]bool
 
-func shouldTrace(phase string) bool {
-	return tracePhases[phase]
+func (t *TraceConfiguration) shouldTrace(phase string) bool {
+	if t == nil {
+		return false
+	}
+	if t.tracePhases["*"] {
+		return true
+	}
+	return t.tracePhases[phase]
 }
 
-func isTraceLicense(lic string) bool {
-	return traceLicenses[lic]
+func (t *TraceConfiguration) isTraceLicense(lic string) bool {
+	if t == nil {
+		return false
+	}
+	if t.traceLicenses[lic] {
+		return true
+	}
+
+	for e := range t.traceLicenses {
+		if idx := strings.Index(e, "*"); idx != -1 {
+			if strings.HasPrefix(lic, e[0:idx]) {
+				return true
+			}
+		}
+	}
+
+	return false
 }
 
-func traceSearchset(lic string) bool {
-	return traceLicenses[lic] && shouldTrace("searchset")
+func (t *TraceConfiguration) trace(f string, args ...interface{}) {
+	if t == nil || t.Tracer == nil {
+		fmt.Printf(f, args...)
+		fmt.Println()
+		return
+	}
+
+	t.Tracer(f, args...)
 }
 
-func traceTokenize(lic string) bool {
-	return traceLicenses[lic] && shouldTrace("tokenize")
+func (t *TraceConfiguration) traceSearchset(lic string) bool {
+	return t.isTraceLicense(lic) && t.shouldTrace("searchset")
 }
 
-func traceScoring(lic string) bool {
-	return traceLicenses[lic] && shouldTrace("score")
+func (t *TraceConfiguration) traceTokenize(lic string) bool {
+	return t.isTraceLicense(lic) && t.shouldTrace("tokenize")
 }
 
-func traceFrequency(lic string) bool {
-	return traceLicenses[lic] && shouldTrace("frequency")
+func (t *TraceConfiguration) traceScoring(lic string) bool {
+	return t.isTraceLicense(lic) && t.shouldTrace("score")
 }
 
-type traceFunc func(string, ...interface{}) (int, error)
+func (t *TraceConfiguration) traceFrequency(lic string) bool {
+	return t.isTraceLicense(lic) && t.shouldTrace("frequency")
+}
 
-// Trace holds the function that should be called to emit data. This can be overridden as desired,
-// defaulting to output on stdout.
-var Trace traceFunc = fmt.Printf
+// TraceFunc works like fmt.Printf to emit tracing data for the
+// classifier.
+type TraceFunc func(string, ...interface{})

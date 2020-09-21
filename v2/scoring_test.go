@@ -15,6 +15,8 @@
 package classifier
 
 import (
+	"fmt"
+	"strings"
 	"testing"
 
 	"github.com/sergi/go-diff/diffmatchpatch"
@@ -93,6 +95,7 @@ func TestLevenshteinDiff(t *testing.T) {
 func TestScoreDiffs(t *testing.T) {
 	tests := []struct {
 		name     string
+		license  string
 		diffs    []diffmatchpatch.Diff
 		expected int
 	}{
@@ -162,7 +165,8 @@ func TestScoreDiffs(t *testing.T) {
 			expected: lesserGPLChange,
 		},
 		{
-			name: "license name change by name insertion",
+			name:    "license name change by name insertion",
+			license: "ImageMagick",
 			diffs: []diffmatchpatch.Diff{
 				{
 					Type: diffmatchpatch.DiffEqual,
@@ -179,7 +183,7 @@ func TestScoreDiffs(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			if got := scoreDiffs(test.diffs); got != test.expected {
+			if got := scoreDiffs(test.license, test.diffs); got != test.expected {
 				t.Errorf("got %d, want %d", got, test.expected)
 			}
 		})
@@ -258,19 +262,36 @@ func TestScore(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			c := NewCorpus(.8)
+			var trace strings.Builder
+			c := NewClassifier(.8)
+			c.SetTraceConfiguration(&TraceConfiguration{
+				TraceLicenses: "*",
+				TracePhases:   "*",
+				Tracer: func(f string, args ...interface{}) {
+					trace.WriteString(fmt.Sprintf(f, args...))
+				},
+			})
 			c.AddContent("known", test.known)
 			kd := c.docs["known"]
 			ud := c.createTargetIndexedDocument(test.unknown)
-			conf, so, eo := score(test.name, ud, kd, 0, ud.size())
+			conf, so, eo := c.score(test.name, ud, kd, 0, ud.size())
+
+			success := true
 			if conf != test.expectedConf {
 				t.Errorf("conf: got %v want %v", conf, test.expectedConf)
+				success = false
 			}
 			if so != test.expectedStart {
 				t.Errorf("start offset: got %v want %v", so, test.expectedStart)
+				success = false
 			}
 			if eo != test.expectedEnd {
 				t.Errorf("end offset: got %v want %v", so, test.expectedEnd)
+				success = false
+			}
+
+			if !success {
+				t.Errorf("Trace:\n%s", trace.String())
 			}
 		})
 	}

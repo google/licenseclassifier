@@ -51,15 +51,122 @@ func TestInitTrace(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			*traceLicensesFlag = test.licFlag
-			*tracePhasesFlag = test.phaseFlag
-			initTrace()
-			if !cmp.Equal(traceLicenses, test.expectedLics) {
+			tc := &TraceConfiguration{
+				TraceLicenses: test.licFlag,
+				TracePhases:   test.phaseFlag,
+			}
+			tc.init()
+			if !cmp.Equal(tc.traceLicenses, test.expectedLics) {
 				t.Errorf("got %v want %v", traceLicenses, test.expectedLics)
 			}
-			if !cmp.Equal(tracePhases, test.expectedPhases) {
+			if !cmp.Equal(tc.tracePhases, test.expectedPhases) {
 				t.Errorf("got %v want %v", traceLicenses, test.expectedPhases)
 			}
 		})
+	}
+}
+
+func TestPhaseWildcardMatching(t *testing.T) {
+	tests := []struct {
+		name   string
+		phases string
+		hits   []string
+		misses []string
+	}{
+		{
+			name:   "exact match",
+			phases: "scoring",
+			hits:   []string{"scoring"},
+			misses: []string{"tokenize"},
+		},
+		{
+			name:   "all match",
+			phases: "*",
+			hits:   []string{"scoring", "tokenize"},
+			misses: nil,
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			tc := &TraceConfiguration{
+				TracePhases: test.phases,
+			}
+			tc.init()
+			for _, h := range test.hits {
+				if !tc.shouldTrace(h) {
+					t.Errorf("unexpected miss on phase %s", h)
+				}
+			}
+
+			for _, m := range test.misses {
+				if tc.shouldTrace(m) {
+					t.Errorf("unexpected hit on phase %s", m)
+				}
+			}
+		})
+	}
+}
+
+func TestLicenseWildcardMatching(t *testing.T) {
+	tests := []struct {
+		name     string
+		licenses string
+		hits     []string
+		misses   []string
+	}{
+		{
+			name:     "exact match",
+			hits:     []string{"GPL-2.0"},
+			misses:   []string{"Apache-2.0", "GPL-3.0"},
+			licenses: "GPL-2.0",
+		},
+		{
+			name:     "prefix match",
+			hits:     []string{"GPL-2.0", "GPL-3.0"},
+			misses:   []string{"Apache-2.0"},
+			licenses: "GPL-*",
+		},
+		{
+			name:     "all match",
+			hits:     []string{"GPL-2.0", "GPL-3.0", "Apache-2.0"},
+			misses:   nil,
+			licenses: "*",
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			tc := &TraceConfiguration{
+				TraceLicenses: test.licenses,
+			}
+			tc.init()
+			for _, h := range test.hits {
+				if !tc.isTraceLicense(h) {
+					t.Errorf("unexpected miss on license %s", h)
+				}
+			}
+
+			for _, m := range test.misses {
+				if tc.isTraceLicense(m) {
+					t.Errorf("unexpected hit on license %s", m)
+				}
+			}
+		})
+	}
+}
+
+// The TraceConfiguration is only explicitly initialized and propagated to a
+// variety of helper structs. For convenience, we just make it work safely in
+// the case the pointer is nil. This test ensures that behavior so users of the
+// TraceConfiguration don't need to explicitly initialize it.
+func TestNilSafety(t *testing.T) {
+	var tc *TraceConfiguration
+	tc.init()
+	if tc.isTraceLicense("GPL-2.0") {
+		t.Errorf("unexpected hit on license")
+	}
+
+	if tc.shouldTrace("scoring") {
+		t.Errorf("unexpected hit on phase")
 	}
 }

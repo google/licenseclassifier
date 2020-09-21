@@ -202,7 +202,7 @@ func TestTokenizer(t *testing.T) {
 		{
 			name:   "preserve version number (not a header, but header-looking) not at beginning of sentence",
 			input:  "This is version 1.1.",
-			output: "this is version 1.1.",
+			output: "this is version 1.1",
 		},
 		{
 			name:   "copyright inside a comment",

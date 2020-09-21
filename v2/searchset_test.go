@@ -15,7 +15,9 @@
 package classifier
 
 import (
+	"fmt"
 	"reflect"
+	"strings"
 	"testing"
 
 	"github.com/davecgh/go-spew/spew"
@@ -86,10 +88,19 @@ func TestSearchSet_New(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		corpus := NewCorpus(.8) // This value doesn't affect the test.
-		corpus.AddContent("text", tt.text)
-		if got := newSearchSet(corpus.docs["text"], tt.q); !reflect.DeepEqual(got, tt.want) {
+		var trace strings.Builder
+		c := NewClassifier(.8) // This value doesn't affect the test.
+		c.SetTraceConfiguration(&TraceConfiguration{
+			TraceLicenses: "*",
+			TracePhases:   "*",
+			Tracer: func(f string, args ...interface{}) {
+				trace.WriteString(fmt.Sprintf(f, args...))
+			},
+		})
+		c.AddContent("text", tt.text)
+		if got := newSearchSet(c.docs["text"], tt.q); !reflect.DeepEqual(got, tt.want) {
 			t.Errorf("New(%q) = %+v, want %+v", tt.description, spew.Sdump(got), spew.Sdump(tt.want))
+			t.Errorf("Trace:\n%s", trace.String())
 		}
 	}
 }
@@ -133,14 +144,23 @@ func TestFindPotentialMatches(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			c := NewCorpus(test.confidence)
+			var trace strings.Builder
+			c := NewClassifier(test.confidence)
+			c.SetTraceConfiguration(&TraceConfiguration{
+				TraceLicenses: "*",
+				TracePhases:   "*",
+				Tracer: func(f string, args ...interface{}) {
+					trace.WriteString(fmt.Sprintf(f, args...))
+				},
+			})
 			c.AddContent("source", test.src)
 
 			doc := c.createTargetIndexedDocument(test.target)
 			doc.generateSearchSet(c.q)
-			hits := findPotentialMatches(c.docs["source"].s, doc.s, test.confidence)
+			hits := c.findPotentialMatches(c.docs["source"].s, doc.s, test.confidence)
 			if actual := len(hits); actual != test.expectedHits {
 				t.Errorf("got %d hits, wanted %d", actual, test.expectedHits)
+				t.Errorf("Trace:\n%s", trace.String())
 			}
 		})
 	}
@@ -249,10 +269,20 @@ func TestFuseRanges(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			runs := detectRuns(test.name, test.in, 100, 100, test.conf, 4)
-			actual := fuseRanges(test.name, test.in, test.conf, test.size, runs, 100)
+			var trace strings.Builder
+			c := NewClassifier(.8)
+			c.SetTraceConfiguration(&TraceConfiguration{
+				TraceLicenses: "*",
+				TracePhases:   "*",
+				Tracer: func(f string, args ...interface{}) {
+					trace.WriteString(fmt.Sprintf(f, args...))
+				},
+			})
+			runs := c.detectRuns(test.name, test.in, 100, 100, test.conf, 4)
+			actual := c.fuseRanges(test.name, test.in, test.conf, test.size, runs, 100)
 			if !cmp.Equal(actual, test.out) {
 				t.Errorf("%v: %v", test.name, cmp.Diff(actual, test.out))
+				t.Errorf("Trace:\n%s", trace.String())
 			}
 		})
 	}
@@ -338,8 +368,18 @@ func TestDetectRuns(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			if got := detectRuns(test.name, test.matched, test.targetLength, test.subsetLength, test.threshold, test.q); !cmp.Equal(got, test.expected) {
+			var trace strings.Builder
+			c := NewClassifier(.8)
+			c.SetTraceConfiguration(&TraceConfiguration{
+				TraceLicenses: "*",
+				TracePhases:   "*",
+				Tracer: func(f string, args ...interface{}) {
+					trace.WriteString(fmt.Sprintf(f, args...))
+				},
+			})
+			if got := c.detectRuns(test.name, test.matched, test.targetLength, test.subsetLength, test.threshold, test.q); !cmp.Equal(got, test.expected) {
 				t.Errorf(cmp.Diff(got, test.expected))
+				t.Errorf("Trace:\n%s", trace.String())
 			}
 
 		})

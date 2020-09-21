@@ -45,7 +45,14 @@ func cleanupToken(in string) string {
 					out.WriteRune(c)
 				}
 			}
-			return out.String()
+
+			// Numbers should not end in a . since that doesn't indicate a version
+			// number, but usually an end of a line.
+			res := out.String()
+			for strings.HasSuffix(res, ".") {
+				res = res[0 : len(res)-1]
+			}
+			return res
 		}
 	}
 
