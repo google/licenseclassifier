@@ -15,8 +15,8 @@
 package classifier
 
 import (
-	"strconv"
 	"strings"
+	"unicode"
 
 	"github.com/sergi/go-diff/diffmatchpatch"
 )
@@ -106,6 +106,15 @@ func diffLevenshteinWord(diffs []diffmatchpatch.Diff) int {
 	return levenshtein
 }
 
+func isVersionNumber(in string) bool {
+	for _, r := range in {
+		if !unicode.IsDigit(r) && r != '.' {
+			return false
+		}
+	}
+	return true
+}
+
 // scoreDiffs returns a score rating the acceptability of these diffs.  A
 // negative value means that the changes represented by the diff are not an
 // acceptable transformation since it would change the underlying license.  A
@@ -125,7 +134,7 @@ func scoreDiffs(id string, diffs []diffmatchpatch.Diff) int {
 			if i := strings.Index(num, " "); i != -1 {
 				num = num[0:i]
 			}
-			if _, err := strconv.ParseFloat(num, 32); err == nil && strings.HasSuffix(prevText, "version") {
+			if isVersionNumber(num) && strings.HasSuffix(prevText, "version") {
 				if !strings.HasSuffix(prevText, "the standard version") && !strings.HasSuffix(prevText, "the contributor version") {
 					return versionChange
 				}
@@ -142,6 +151,7 @@ func scoreDiffs(id string, diffs []diffmatchpatch.Diff) int {
 				"Apache":                           {"apache"},
 				"BSD":                              {"bsd"},
 				"BSD-3-Clause-Attribution":         {"acknowledgment"},
+				"bzip2":                            {"seward"},
 				"GPL-2.0-with-GCC-exception":       {"gcc linking exception"},
 				"GPL-2.0-with-autoconf-exception":  {"autoconf exception"},
 				"GPL-2.0-with-bison-exception":     {"bison exception"},
