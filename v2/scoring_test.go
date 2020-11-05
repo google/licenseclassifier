@@ -271,9 +271,9 @@ func TestScore(t *testing.T) {
 					trace.WriteString(fmt.Sprintf(f, args...))
 				},
 			})
-			c.AddContent("known", test.known)
+			c.AddContent("known", []byte(test.known))
 			kd := c.docs["known"]
-			ud := c.createTargetIndexedDocument(test.unknown)
+			ud := c.createTargetIndexedDocument([]byte(test.unknown))
 			conf, so, eo := c.score(test.name, ud, kd, 0, ud.size())
 
 			success := true

@@ -67,10 +67,10 @@ func cleanupToken(in string) string {
 }
 
 // tokenize produces a document from the input content.
-func tokenize(in string) *document {
+func tokenize(in []byte) *document {
 	// Apply the global transforms described in SPDX
 
-	norm := strings.ToLower(in)
+	norm := strings.ToLower(string(in))
 	norm = html.UnescapeString(norm)
 	norm = normalizePunctuation(norm)
 	norm = normalizeEquivalentWords(norm)

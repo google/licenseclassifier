@@ -95,8 +95,9 @@ func max(a, b int) int {
 	return b
 }
 
-// AddContent incorporates the provided textual content into the classifier for matching.
-func (c *Classifier) AddContent(name, content string) {
+// AddContent incorporates the provided textual content into the classifier for
+// matching. This will not modify the supplied content.
+func (c *Classifier) AddContent(name string, content []byte) {
 	doc := tokenize(content)
 	c.addDocument(name, doc)
 }
@@ -145,7 +146,7 @@ func (c *Classifier) generateIndexedDocument(d *document, addWords bool) *indexe
 // createTargetIndexedDocument creates an indexed document without adding the
 // words to the classifier dictionary. This should be used for matching targets, not
 // populating the corpus.
-func (c *Classifier) createTargetIndexedDocument(in string) *indexedDocument {
+func (c *Classifier) createTargetIndexedDocument(in []byte) *indexedDocument {
 	doc := tokenize(in)
 	return c.generateIndexedDocument(doc, false)
 }

@@ -270,9 +270,9 @@ func TestDiffing(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			c := NewClassifier(.8)
-			c.AddContent("known", test.known)
+			c.AddContent("known", []byte(test.known))
 			kd := c.docs["known"]
-			ud := c.createTargetIndexedDocument(test.unknown)
+			ud := c.createTargetIndexedDocument([]byte(test.unknown))
 			diffs := docDiff("known", ud, 0, ud.size(), kd, 0, kd.size())
 			start, end := diffRange(kd.normalized(), diffs)
 			if start != test.start {

@@ -28,7 +28,7 @@ import (
 
 type scenario struct {
 	expected []string
-	data     string
+	data     []byte
 }
 
 var defaultThreshold = .8
@@ -114,7 +114,7 @@ func readScenario(path string) *scenario {
 	} else {
 		s.expected = []string{}
 	}
-	s.data = lines[1]
+	s.data = []byte(lines[1])
 	return &s
 }
 
