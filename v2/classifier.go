@@ -55,7 +55,7 @@ func (d Matches) Less(i, j int) bool {
 }
 
 // Match reports instances of the supplied content in the corpus.
-func (c *Classifier) match(in string) Matches {
+func (c *Classifier) match(in []byte) Matches {
 	id := c.createTargetIndexedDocument(in)
 
 	firstPass := make(map[string]*indexedDocument)
@@ -207,7 +207,7 @@ func (c *Classifier) LoadLicenses(dir string) error {
 		}
 
 		content := trimExtraneousTrailingText(string(b))
-		c.AddContent(name, content)
+		c.AddContent(name, []byte(content))
 	}
 	return nil
 }
@@ -218,8 +218,9 @@ func (c *Classifier) SetTraceConfiguration(in *TraceConfiguration) {
 	c.tc.init()
 }
 
-// Match finds matches within an unknown text.
-func (c *Classifier) Match(in string) Matches {
+// Match finds matches within an unknown text. This will not modify the contents
+// of the supplied byte slice.
+func (c *Classifier) Match(in []byte) Matches {
 	return c.match(in)
 }
 

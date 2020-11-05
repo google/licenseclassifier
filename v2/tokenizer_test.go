@@ -138,7 +138,7 @@ The AWESOME Project`,
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			d := tokenize(test.input)
+			d := tokenize([]byte(test.input))
 			if !cmp.Equal(d, test.output, cmpopts.IgnoreUnexported(document{})) {
 				t.Errorf("%s failed: %s", test.name, cmp.Diff(d, test.output))
 			}
@@ -238,7 +238,7 @@ The FreeType Project`,
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			d := tokenize(test.input)
+			d := tokenize([]byte(test.input))
 			var b strings.Builder
 			for _, tok := range d.Tokens {
 				b.WriteString(tok.Text)
