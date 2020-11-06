@@ -15,6 +15,8 @@
 package classifier
 
 import (
+	"bytes"
+	"errors"
 	"io/ioutil"
 	"log"
 	"os"
@@ -22,6 +24,7 @@ import (
 	"sort"
 	"strings"
 	"testing"
+	"testing/iotest"
 
 	"github.com/davecgh/go-spew/spew"
 )
@@ -39,15 +42,10 @@ func classifier() (*Classifier, error) {
 	return c, c.LoadLicenses(baseLicenses)
 }
 
-func TestScenarios(t *testing.T) {
-	c, err := classifier()
-	if err != nil {
-		t.Fatalf("couldn't instantiate standard test classifier: %v", err)
-	}
-
+func getScenarioFilenames() ([]string, error) {
 	scenarios := "./scenarios"
 	var files []string
-	err = filepath.Walk(scenarios, func(path string, info os.FileInfo, err error) error {
+	err := filepath.Walk(scenarios, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err
 		}
@@ -58,6 +56,16 @@ func TestScenarios(t *testing.T) {
 		return nil
 	})
 
+	return files, err
+}
+
+func TestMatchScenarios(t *testing.T) {
+	c, err := classifier()
+	if err != nil {
+		t.Fatalf("couldn't instantiate standard test classifier: %v", err)
+	}
+
+	files, err := getScenarioFilenames()
 	if err != nil {
 		t.Fatalf("encountered error walking scenarios directory: %v", err)
 	}
@@ -66,30 +74,7 @@ func TestScenarios(t *testing.T) {
 		s := readScenario(f)
 
 		m := c.Match(s.data)
-
-		found := make(map[string]bool)
-		// Uniquify the licenses found
-		for _, l := range m {
-			found[l.Name] = true
-		}
-
-		var names []string
-		for l := range found {
-			names = append(names, l)
-		}
-		sort.Strings(names)
-
-		if len(names) != len(s.expected) {
-			t.Errorf("Match(%q) number matches: %v, want %v: %v", f, len(names), len(s.expected), spew.Sdump(m))
-			continue
-		}
-
-		for i := 0; i < len(names); i++ {
-			w := strings.TrimSpace(s.expected[i])
-			if got, want := names[i], w; got != want {
-				t.Errorf("Match(%q) = %q, want %q", f, got, want)
-			}
-		}
+		checkMatches(t, m, f, s.expected)
 	}
 }
 
@@ -233,5 +218,62 @@ Extra text is here`
 	expected := "Sample text\n"
 	if got := trimExtraneousTrailingText(in); got != expected {
 		t.Errorf("trimExtraneousTrailingText: got %q want %q", got, expected)
+	}
+}
+
+func TestMatchFrom(t *testing.T) {
+	tr := iotest.TimeoutReader(strings.NewReader("some data"))
+	c, err := classifier()
+	if err != nil {
+		t.Fatalf("couldn't instantiate standard Google classifier: %v", err)
+	}
+
+	_, err = c.MatchFrom(tr)
+	if !errors.Is(err, iotest.ErrTimeout) {
+		t.Errorf("got %v want %v", err, iotest.ErrTimeout)
+	}
+
+	files, err := getScenarioFilenames()
+
+	if err != nil {
+		t.Fatalf("encountered error walking scenarios directory: %v", err)
+	}
+
+	for _, f := range files {
+		s := readScenario(f)
+		r := bytes.NewReader(s.data)
+		m, err := c.MatchFrom(r)
+		if err != nil {
+			t.Errorf("unexpected error: %v", err)
+		}
+		checkMatches(t, m, f, s.expected)
+	}
+}
+
+// checkMatches diffs the resulting matches against the expected content and
+// sets test results.
+func checkMatches(t *testing.T, m Matches, f string, e []string) {
+	found := make(map[string]bool)
+	// Uniquify the licenses found
+	for _, l := range m {
+		found[l.Name] = true
+	}
+
+	var names []string
+	for l := range found {
+		names = append(names, l)
+	}
+	sort.Strings(names)
+
+	if len(names) != len(e) {
+		t.Errorf("Match(%q) number matches: %v, want %v: %v", f, len(names), len(e), spew.Sdump(m))
+		return
+	}
+
+	for i := 0; i < len(names); i++ {
+		w := strings.TrimSpace(e[i])
+		if got, want := names[i], w; got != want {
+			t.Errorf("Match(%q) = %q, want %q", f, got, want)
+		}
 	}
 }

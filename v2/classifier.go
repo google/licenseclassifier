@@ -15,6 +15,8 @@
 package classifier
 
 import (
+	"fmt"
+	"io"
 	"io/ioutil"
 	"os"
 	"path"
@@ -222,6 +224,15 @@ func (c *Classifier) SetTraceConfiguration(in *TraceConfiguration) {
 // of the supplied byte slice.
 func (c *Classifier) Match(in []byte) Matches {
 	return c.match(in)
+}
+
+// MatchFrom finds matches within the read content.
+func (c *Classifier) MatchFrom(in io.Reader) (Matches, error) {
+	b, err := ioutil.ReadAll(in)
+	if err != nil {
+		return nil, fmt.Errorf("classifier couldn't read: %w", err)
+	}
+	return c.Match(b), nil
 }
 
 func detectionType(in string) string {
