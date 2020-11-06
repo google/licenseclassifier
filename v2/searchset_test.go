@@ -75,8 +75,8 @@ func TestSearchSet_New(t *testing.T) {
 			q:           4,
 			want: &searchSet{
 				Tokens: []indexedToken{
-					indexedToken{Index: 0, Line: 1, ID: 1},
-					indexedToken{Index: 1, Line: 1, ID: 2},
+					{Index: 0, Line: 1, ID: 1},
+					{Index: 1, Line: 1, ID: 2},
 				},
 				Hashes:         hash{1957950203: tokenRanges{&tokenRange{Start: 0, End: 2}}},
 				Checksums:      []uint32{1957950203},
@@ -308,7 +308,7 @@ func TestDetectRuns(t *testing.T) {
 				&matchRange{TargetStart: 0, TargetEnd: 100},
 			},
 			expected: []matchRange{
-				matchRange{SrcStart: 0, SrcEnd: 4},
+				{SrcStart: 0, SrcEnd: 4},
 			},
 		},
 		{
@@ -323,7 +323,7 @@ func TestDetectRuns(t *testing.T) {
 				&matchRange{TargetStart: 0, TargetEnd: 100},
 			},
 			expected: []matchRange{
-				matchRange{SrcStart: 0, SrcEnd: 24},
+				{SrcStart: 0, SrcEnd: 24},
 			},
 		},
 		{
@@ -340,9 +340,9 @@ func TestDetectRuns(t *testing.T) {
 			},
 			expected: []matchRange{
 				// Runs end on 4-gram boundaries
-				matchRange{SrcStart: 0, SrcEnd: 6},
+				{SrcStart: 0, SrcEnd: 6},
 				// The run starts early because of error tolerance
-				matchRange{SrcStart: 48, SrcEnd: 56},
+				{SrcStart: 48, SrcEnd: 56},
 			},
 		},
 		{
@@ -360,8 +360,8 @@ func TestDetectRuns(t *testing.T) {
 			expected: []matchRange{
 				// Runs end on 4-gram boundaries and start early because
 				// of error tolerance.
-				matchRange{SrcStart: 19, SrcEnd: 25},
-				matchRange{SrcStart: 59, SrcEnd: 67},
+				{SrcStart: 19, SrcEnd: 25},
+				{SrcStart: 59, SrcEnd: 67},
 			},
 		},
 	}

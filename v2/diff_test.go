@@ -61,7 +61,7 @@ func TestTextLength(t *testing.T) {
 		{
 			name: "deletion diff",
 			diffs: []diffmatchpatch.Diff{
-				diffmatchpatch.Diff{
+				{
 					Type: diffmatchpatch.DiffDelete,
 					Text: "deleted text",
 				},
@@ -121,7 +121,7 @@ func TestDiffing(t *testing.T) {
 			start:   0,
 			end:     1,
 			diffs: []diffmatchpatch.Diff{
-				diffmatchpatch.Diff{
+				{
 					Type: diffmatchpatch.DiffEqual,
 					Text: `when in the course of human events it becomes necessary for one people to dissolve the political bands which have connected them with another and to assume among the powers of the earth the separate and equal station to which the laws of nature and of natures god entitle them a decent respect to the opinions of mankind requires that they should declare the causes which impel them to the separation`,
 				},
@@ -134,27 +134,27 @@ func TestDiffing(t *testing.T) {
 			start:   0,
 			end:     6,
 			diffs: []diffmatchpatch.Diff{
-				diffmatchpatch.Diff{
+				{
 					Type: diffmatchpatch.DiffEqual,
 					Text: "lorem ipsum dolor",
 				},
-				diffmatchpatch.Diff{
+				{
 					Type: diffmatchpatch.DiffDelete,
 					Text: "UNKNOWN",
 				},
-				diffmatchpatch.Diff{
+				{
 					Type: diffmatchpatch.DiffInsert,
 					Text: "sit",
 				},
-				diffmatchpatch.Diff{
+				{
 					Type: diffmatchpatch.DiffEqual,
 					Text: "amet consectetur adipiscing elit nulla varius enim mattis rhoncus lectus id aliquet",
 				},
-				diffmatchpatch.Diff{
+				{
 					Type: diffmatchpatch.DiffInsert,
 					Text: "sem",
 				},
-				diffmatchpatch.Diff{
+				{
 					Type: diffmatchpatch.DiffEqual,
 					Text: "phasellus eget ex in dolor feugiat ultricies etiam interdum sit amet nisl in placerat sed vitae enim vulputate tempus leo commodo accumsan nulla",
 				},
@@ -167,27 +167,27 @@ func TestDiffing(t *testing.T) {
 			start:   0,
 			end:     6,
 			diffs: []diffmatchpatch.Diff{
-				diffmatchpatch.Diff{
+				{
 					Type: diffmatchpatch.DiffEqual,
 					Text: "four score and seven years ago our fathers brought forth on this continent a",
 				},
-				diffmatchpatch.Diff{
+				{
 					Type: diffmatchpatch.DiffDelete,
 					Text: "nation that UNKNOWN",
 				},
-				diffmatchpatch.Diff{
+				{
 					Type: diffmatchpatch.DiffEqual,
 					Text: "new",
 				},
-				diffmatchpatch.Diff{
+				{
 					Type: diffmatchpatch.DiffDelete,
 					Text: "and UNKNOWN",
 				},
-				diffmatchpatch.Diff{
+				{
 					Type: diffmatchpatch.DiffInsert,
 					Text: "nation",
 				},
-				diffmatchpatch.Diff{
+				{
 					Type: diffmatchpatch.DiffEqual,
 					Text: "conceived in liberty and dedicated to the proposition that all men are created equal",
 				},
@@ -200,11 +200,11 @@ func TestDiffing(t *testing.T) {
 			start:   1,
 			end:     2,
 			diffs: []diffmatchpatch.Diff{
-				diffmatchpatch.Diff{
+				{
 					Type: diffmatchpatch.DiffDelete,
 					Text: "in the UNKNOWN UNKNOWN UNKNOWN UNKNOWN",
 				},
-				diffmatchpatch.Diff{
+				{
 					Type: diffmatchpatch.DiffEqual,
 					Text: "four score and seven years ago our fathers brought forth on this continent a new nation conceived in liberty and dedicated to the proposition that all men are created equal",
 				},
@@ -217,11 +217,11 @@ func TestDiffing(t *testing.T) {
 			start:   0,
 			end:     1,
 			diffs: []diffmatchpatch.Diff{
-				diffmatchpatch.Diff{
+				{
 					Type: diffmatchpatch.DiffEqual,
 					Text: "four score and seven years ago our fathers brought forth on this continent a new nation conceived in liberty and dedicated to the proposition that all men are created equal",
 				},
-				diffmatchpatch.Diff{
+				{
 					Type: diffmatchpatch.DiffDelete,
 					Text: "in the UNKNOWN UNKNOWN UNKNOWN UNKNOWN",
 				},
@@ -234,15 +234,15 @@ func TestDiffing(t *testing.T) {
 			start:   1,
 			end:     2,
 			diffs: []diffmatchpatch.Diff{
-				diffmatchpatch.Diff{
+				{
 					Type: diffmatchpatch.DiffDelete,
 					Text: "in the UNKNOWN UNKNOWN UNKNOWN UNKNOWN",
 				},
-				diffmatchpatch.Diff{
+				{
 					Type: diffmatchpatch.DiffEqual,
 					Text: "four score and seven years ago our fathers brought forth on this continent a new nation conceived in liberty and dedicated to the proposition that all men are created equal",
 				},
-				diffmatchpatch.Diff{
+				{
 					Type: diffmatchpatch.DiffDelete,
 					Text: "in the UNKNOWN UNKNOWN UNKNOWN UNKNOWN",
 				},
@@ -255,11 +255,11 @@ func TestDiffing(t *testing.T) {
 			start:   1,
 			end:     2,
 			diffs: []diffmatchpatch.Diff{
-				diffmatchpatch.Diff{
+				{
 					Type: diffmatchpatch.DiffDelete,
 					Text: "UNKNOWN",
 				},
-				diffmatchpatch.Diff{
+				{
 					Type: diffmatchpatch.DiffInsert,
 					Text: "that",
 				},

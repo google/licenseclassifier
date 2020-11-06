@@ -424,7 +424,7 @@ func (c *Classifier) detectRuns(origin string, matched matchRanges, targetLength
 	}
 
 	final := []matchRange{
-		matchRange{
+		{
 			SrcStart: out[0],
 			SrcEnd:   out[0] + q,
 		},
