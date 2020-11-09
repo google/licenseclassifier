@@ -34,3 +34,23 @@ the target that correspond to a range of text in the source. The searchset
 algorithms compensate for the allowable error in matching text exactly, dealing
 with additional or missing tokens.
 
+
+## Migrating from v1
+
+The API for the classifier versions is quite similar, but there are two key
+distinctions to be aware of while migrating usages.
+
+The confidence value for the v2 classifier is applied uniformly to results; it
+will never return a match that is lower confidence than the threshold. In v1,
+MultipleMatch behaved this way, but NearestMatch would return a value
+regardless of the confidence match. Users often verified that the confidence
+was above the threshold, but this is no longer necessary.
+
+The second change is that the classifier now returns all matches against the
+supplied corpus. The v1 classifier allowed filtering on header matches via a
+boolean field. This can be emulated by creating a license classifier with a
+reduced corpus if matching against headers is not desired. Alternatively, the
+user can use the MatchType field in the Match struct to filter out unwanted
+matches.
+
+
