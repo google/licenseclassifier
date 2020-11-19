@@ -27,6 +27,7 @@ import (
 	"testing/iotest"
 
 	"github.com/davecgh/go-spew/spew"
+	"path"
 )
 
 type scenario struct {
@@ -39,13 +40,13 @@ var baseLicenses = "./licenses"
 
 func classifier() (*Classifier, error) {
 	c := NewClassifier(defaultThreshold)
-	return c, c.LoadLicenses(baseLicenses)
+	return c, c.LoadLicenses(path.Join(baseLicenses))
 }
 
 func getScenarioFilenames() ([]string, error) {
 	scenarios := "./scenarios"
 	var files []string
-	err := filepath.Walk(scenarios, func(path string, info os.FileInfo, err error) error {
+	err := filepath.Walk(path.Join(scenarios), func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err
 		}
