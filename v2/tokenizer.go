@@ -296,7 +296,7 @@ func header(tok *token) bool {
 			// Sometimes an internal reference like "(ii)" from NPL-1.02.txt
 			// ends up at the beginning of a line. In that case, it's
 			// not actually a header.
-			if e == ')' && !strings.HasSuffix(tok.Previous, "(") {
+			if !strings.HasSuffix(tok.Previous, "(") {
 				return true
 			}
 		}
