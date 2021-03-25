@@ -21,7 +21,13 @@ import (
 	"path/filepath"
 	"runtime"
 	"strings"
+
+	"github.com/google/licenseclassifier/licenses"
 )
+
+// forceDepOnLicenses is used to force a package dependency on the licenses
+// dir, which includes the LicenseArchive and ForbiddenLicenseArchive files.
+type forceDepOnLicenses licenses.Dummy
 
 const (
 	// LicenseDirectory is the directory where the prototype licenses are kept.
