@@ -124,7 +124,7 @@ func TestContainsAndOverlaps(t *testing.T) {
 			overlaps: false,
 		},
 		{
-			name: "overlap at end",
+			name: "overlap at start",
 			a: &Match{
 				StartLine: 4,
 				EndLine:   10,
