@@ -211,17 +211,6 @@ func TestLicName(t *testing.T) {
 	}
 }
 
-func TestTrimExtraneousText(t *testing.T) {
-	in := `Sample text
-END OF TERMS AND CONDITIONS
-Extra text is here`
-
-	expected := "Sample text\n"
-	if got := trimExtraneousTrailingText(in); got != expected {
-		t.Errorf("trimExtraneousTrailingText: got %q want %q", got, expected)
-	}
-}
-
 func TestMatchFrom(t *testing.T) {
 	tr := iotest.TimeoutReader(strings.NewReader("some data"))
 	c, err := classifier()
