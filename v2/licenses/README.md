@@ -2,7 +2,8 @@
 
 ## Overview
 
-The licenses in this directory are taken from [SPDX](https://spdx.org/licenses).
+The licenses in this directory were originally extracted from the
+[SPDX](https://spdx.org/licenses) license database.  More have been added.
 
 ## Naming Convention
 
