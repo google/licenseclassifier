@@ -75,7 +75,7 @@ func TestMatchScenarios(t *testing.T) {
 		s := readScenario(f)
 
 		m := c.Match(s.data)
-		checkMatches(t, m, f, s.expected)
+		checkMatches(t, m.Matches, f, s.expected)
 	}
 }
 
@@ -236,7 +236,7 @@ func TestMatchFrom(t *testing.T) {
 		if err != nil {
 			t.Errorf("unexpected error: %v", err)
 		}
-		checkMatches(t, m, f, s.expected)
+		checkMatches(t, m.Matches, f, s.expected)
 	}
 }
 

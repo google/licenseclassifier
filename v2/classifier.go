@@ -36,6 +36,13 @@ type Match struct {
 	EndTokenIndex   int
 }
 
+// Results captures the summary information and matches detected by the
+// classifier.
+type Results struct {
+	Matches         Matches
+	TotalInputLines int
+}
+
 // Matches is a sortable slice of Match.
 type Matches []*Match
 
@@ -57,7 +64,7 @@ func (d Matches) Less(i, j int) bool {
 }
 
 // Match reports instances of the supplied content in the corpus.
-func (c *Classifier) match(in []byte) Matches {
+func (c *Classifier) match(in []byte) Results {
 	id := c.createTargetIndexedDocument(in)
 
 	firstPass := make(map[string]*indexedDocument)
@@ -69,7 +76,10 @@ func (c *Classifier) match(in []byte) Matches {
 	}
 
 	if len(firstPass) == 0 {
-		return nil
+		return Results{
+			Matches:         nil,
+			TotalInputLines: 0,
+		}
 	}
 
 	// Perform the expensive work of generating a searchset to look for token runs.
@@ -162,7 +172,10 @@ func (c *Classifier) match(in []byte) Matches {
 			out = append(out, candidates[i])
 		}
 	}
-	return out
+	return Results{
+		Matches:         out,
+		TotalInputLines: id.Tokens[len(id.Tokens)-1].Line,
+	}
 }
 
 // Classifier provides methods for identifying open source licenses in text
@@ -226,15 +239,15 @@ func (c *Classifier) SetTraceConfiguration(in *TraceConfiguration) {
 
 // Match finds matches within an unknown text. This will not modify the contents
 // of the supplied byte slice.
-func (c *Classifier) Match(in []byte) Matches {
+func (c *Classifier) Match(in []byte) Results {
 	return c.match(in)
 }
 
 // MatchFrom finds matches within the read content.
-func (c *Classifier) MatchFrom(in io.Reader) (Matches, error) {
+func (c *Classifier) MatchFrom(in io.Reader) (Results, error) {
 	b, err := ioutil.ReadAll(in)
 	if err != nil {
-		return nil, fmt.Errorf("classifier couldn't read: %w", err)
+		return Results{}, fmt.Errorf("classifier couldn't read: %w", err)
 	}
 	return c.Match(b), nil
 }
