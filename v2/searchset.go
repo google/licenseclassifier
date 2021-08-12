@@ -203,7 +203,7 @@ func (c *Classifier) fuseRanges(origin string, matched matchRanges, confidence f
 	var claimed matchRanges
 	errorMargin := int(math.Round(float64(size) * (1.0 - confidence)))
 
-	filter := make([]bool, targetSize)
+	filter := map[int]bool{}
 	for _, m := range runs {
 		for i := m.SrcStart; i < m.SrcEnd; i++ {
 			filter[i] = true
