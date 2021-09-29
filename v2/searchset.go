@@ -203,10 +203,14 @@ func (c *Classifier) fuseRanges(origin string, matched matchRanges, confidence f
 	var claimed matchRanges
 	errorMargin := int(math.Round(float64(size) * (1.0 - confidence)))
 
-	filter := map[int]bool{}
+	filter := make([]bool, targetSize)
 	for _, m := range runs {
 		for i := m.SrcStart; i < m.SrcEnd; i++ {
-			filter[i] = true
+			// Only consider these offsets if they fit into the target document, since
+			// the target may be smaller than the source being analyzed
+			if i < targetSize {
+				filter[i] = true
+			}
 		}
 	}
 
