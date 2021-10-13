@@ -263,13 +263,13 @@ func detectionType(in string) string {
 // of the filename in use.
 func LicenseName(in string) string {
 	out := in
-	if idx := strings.Index(in, ".txt"); idx != -1 {
+	if idx := strings.Index(out, ".txt"); idx != -1 {
 		out = out[0:idx]
 	}
-	if idx := strings.Index(in, "_"); idx != -1 {
+	if idx := strings.Index(out, "_"); idx != -1 {
 		out = out[0:idx]
 	}
-	if idx := strings.Index(in, ".header"); idx != -1 {
+	if idx := strings.Index(out, ".header"); idx != -1 {
 		out = out[0:idx]
 	}
 	return out

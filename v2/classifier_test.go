@@ -27,6 +27,7 @@ import (
 	"testing/iotest"
 
 	"github.com/davecgh/go-spew/spew"
+	"github.com/google/go-cmp/cmp"
 	"path"
 )
 
@@ -265,5 +266,46 @@ func checkMatches(t *testing.T, m Matches, f string, e []string) {
 		if got, want := names[i], w; got != want {
 			t.Errorf("Match(%q) = %q, want %q", f, got, want)
 		}
+	}
+}
+
+func TestLicenseName(t *testing.T) {
+	tests := []struct {
+		input string
+		want  string
+	}{
+		{
+			input: "example",
+			want:  "example",
+		},
+		{
+			input: "example.txt",
+			want:  "example",
+		},
+		{
+			input: "example_a",
+			want:  "example",
+		},
+		{
+			input: "example.header",
+			want:  "example",
+		},
+		{
+			input: "example.header",
+			want:  "example",
+		},
+		{
+			input: "example_a.header.txt",
+			want:  "example",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.input, func(t *testing.T) {
+			got := LicenseName(tt.input)
+			if diff := cmp.Diff(tt.want, got); diff != "" {
+				t.Errorf("Unexpected result; diff %v", diff)
+			}
+		})
 	}
 }
