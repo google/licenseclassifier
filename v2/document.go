@@ -21,11 +21,10 @@ type tokenID int // type to ensure safety when manipulating token identifiers.
 
 // token provides detailed information about a single textual token in the document.
 type token struct {
-	Text     string  // normalized text of the token
-	Index    int     // the token's location in the tokenized document
-	Line     int     // line position of this token in the source
-	Previous string  // for the first token in a line, any previous text.
-	ID       tokenID // identifier of the text in the dictionary
+	Text     string // normalized text of the token
+	Index    int    // the token's location in the tokenized document
+	Line     int    // line position of this token in the source
+	Previous string // for the first token in a line, any previous text.
 }
 
 // document is the representation of the input text for downstream filtering and matching.
