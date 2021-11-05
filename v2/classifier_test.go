@@ -309,3 +309,37 @@ func TestLicenseName(t *testing.T) {
 		})
 	}
 }
+
+func TestNormalize(t *testing.T) {
+	tests := []struct {
+		input string
+		want  string
+	}{
+		{
+			input: "Words  With   Extra Spaces are flattened out, preserving case",
+			want:  "Words With Extra Spaces are flattened out preserving case",
+		},
+		{
+			input: "",
+			want:  "",
+		},
+		{
+			input: "   License  ",
+			want:  "License",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.input, func(t *testing.T) {
+			c, err := classifier()
+			if err != nil {
+				t.Fatalf("couldn't instantiate standard Google classifier: %v", err)
+			}
+
+			got := c.Normalize([]byte(tt.input))
+			if diff := cmp.Diff(tt.want, string(got)); diff != "" {
+				t.Errorf("Unexpected result; diff %v", diff)
+			}
+		})
+	}
+
+}

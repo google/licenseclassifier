@@ -15,6 +15,7 @@
 package classifier
 
 import (
+	"bytes"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -198,6 +199,49 @@ func NewClassifier(threshold float64) *Classifier {
 		q:         computeQ(threshold),
 	}
 	return classifier
+}
+
+// Normalize takes input content and applies the following transforms to aid in
+// identifying license content. The return value of this function is
+// line-separated text which is the basis for position values returned by the
+// classifier.
+//
+//
+// 1. Breaks up long lines of text. This helps with detecting licenses like in
+// TODO(wcn):URL reference
+//
+// 2. Certain ignorable texts are removed to aid matching blocks of text.
+// Introductory lines such as "The MIT License" are removed. Copyright notices
+// are removed since the parties are variable and shouldn't impact matching.
+//
+// It is NOT necessary to call this function to simply identify licenses in a
+// file. It should only be called to aid presenting this information to the user
+// in context (for example, creating diffs of differences to canonical
+// licenses).
+//
+// It is an invariant of the classifier that calling Match(Normalize(in)) will
+// return the same results as Match(in).
+func (c *Classifier) Normalize(in []byte) []byte {
+	text := normalizeDoc(in, false)
+	doc := extractDoc(text)
+
+	var buf bytes.Buffer
+
+	switch len(doc.Tokens) {
+	case 0:
+		return nil
+	case 1:
+		buf.WriteString(doc.Tokens[0].Text)
+		return buf.Bytes()
+	}
+
+	buf.WriteString(doc.Tokens[0].Text)
+
+	for _, t := range doc.Tokens[1:] {
+		buf.WriteString(" ")
+		buf.WriteString(t.Text)
+	}
+	return buf.Bytes()
 }
 
 // LoadLicenses adds the contents of the supplied directory to the corpus of the

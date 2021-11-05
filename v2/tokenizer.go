@@ -59,47 +59,56 @@ func cleanupToken(in string) string {
 	// Remove internal hyphenization or URL constructs to better normalize
 	// strings for matching.
 	for _, c := range in {
-		if c >= 'a' && c <= 'z' {
+		if unicode.IsLetter(c) {
 			out.WriteRune(c)
 		}
 	}
 	return out.String()
 }
 
-// tokenize produces a document from the input content.
-func tokenize(in []byte) *document {
+func normalizeDoc(in []byte, normWords bool) string {
 	// Apply the global transforms described in SPDX
 
-	norm := strings.ToLower(string(in))
+	norm := string(in)
 	norm = html.UnescapeString(norm)
 	norm = normalizePunctuation(norm)
-	norm = normalizeEquivalentWords(norm)
 	norm = removeIgnorableTexts(norm)
 
+	if normWords {
+		norm = normalizeWords(norm)
+	}
+	return norm
+}
+
+func tokenize(in []byte) *document {
+	// tokenize produces a document from the input content.
+	text := normalizeDoc(in, true)
+	return extractDoc(text)
+}
+
+func extractDoc(text string) *document {
 	var doc document
 	// Iterate on a line-by-line basis.
-
-	line := norm
 	i := 0
 	pos := 0
 	for {
-		// Scan the line for the first likely textual content. The scan ignores punctuation
+		// Scan the text for the first likely textual content. The scan ignores punctuation
 		// artifacts that include visual boxes for layout as well as comment characters in
 		// source files.
 		firstInLine := true
 		var wid int
 		var r rune
 
-		if pos == len(line) {
+		if pos == len(text) {
 			break
 		}
 
 		next := func() {
-			r, wid = utf8.DecodeRuneInString(line[pos:])
+			r, wid = utf8.DecodeRuneInString(text[pos:])
 			pos += wid
 		}
 
-		for pos < len(line) {
+		for pos < len(text) {
 			start := pos
 			next()
 
@@ -115,7 +124,7 @@ func tokenize(in []byte) *document {
 			}
 
 			// We're at a word/number character.
-			for pos < len(line) {
+			for pos < len(text) {
 				next()
 				if unicode.IsSpace(r) {
 					pos -= wid // Will skip this in outer loop
@@ -124,7 +133,7 @@ func tokenize(in []byte) *document {
 			}
 
 			if pos > start {
-				if start >= 2 && line[start-2] == '.' && line[start-1] == ' ' {
+				if start >= 2 && text[start-2] == '.' && text[start-1] == ' ' {
 					// Insert a "soft EOL" that helps detect header-looking entries that
 					// follow this text. This resolves problems with licenses that are a
 					// very long line of text, motivated by
@@ -135,12 +144,12 @@ func tokenize(in []byte) *document {
 				}
 
 				tok := token{
-					Text: line[start:pos],
+					Text: text[start:pos],
 					Line: i + 1,
 				}
 				if firstInLine {
 					// Store the prefix material, it is useful to discern some corner cases
-					tok.Previous = line[0:start]
+					tok.Previous = text[0:start]
 				}
 				doc.Tokens = append(doc.Tokens, &tok)
 				firstInLine = false
@@ -276,8 +285,10 @@ var interchangeableWords = []struct {
 	{regexp.MustCompile("per cent"), "percent"},
 }
 
-// normalizeEquivalentWords normalizes equivalent words that are interchangeable.
-func normalizeEquivalentWords(s string) string {
+// normalizeWords remaps equivalent words that are interchangeable and lowercases
+// the word to allow for exact matching.
+func normalizeWords(s string) string {
+	s = strings.ToLower(s)
 	for _, iw := range interchangeableWords {
 		s = iw.interchangeable.ReplaceAllString(s, iw.substitute)
 	}
@@ -324,16 +335,9 @@ var listMarker = func() map[string]bool {
 // ignorableTexts is a list of lines at the start of the string we can remove
 // to get a cleaner match.
 var ignorableTexts = []*regexp.Regexp{
-	regexp.MustCompile(`(?i)^(?:the )?mit license(?: \(mit\))?$`),
-	regexp.MustCompile(`(?i)^(?:new )?bsd license$`),
-	regexp.MustCompile(`(?i)^copyright and permission notice$`),
-	regexp.MustCompile(`^(.{1,5})?copyright (\(c\) )?(\[yyyy\]|\d{4})[,.]?.*$`),
-	regexp.MustCompile(`^(.{1,5})?copyright \(c\) \[dates of first publication\].*$`),
-	regexp.MustCompile(`^\d{4}-(\d{2}|[a-z]{3})-\d{2}$`),
-	regexp.MustCompile(`^\d{4}-[a-z]{3}-\d{2}$`),
-	regexp.MustCompile(`(?i)^(all|some) rights reserved\.?$`),
-	regexp.MustCompile(`(?i)^@license$`),
-	regexp.MustCompile(`^\s*$`),
+	regexp.MustCompile(`(?i)^(.{1,5})?copyright (\(c\) )?(\[yyyy\]|\d{4})[,.]?.*$`),
+	regexp.MustCompile(`(?i)^(.{1,5})?copyright \(c\) \[dates of first publication\].*$`),
+	regexp.MustCompile(`(?i)^\d{4}-(\d{2}|[a-z]{3})-\d{2}$`),
 }
 
 // removeIgnorableTexts removes common text, which is not important for
