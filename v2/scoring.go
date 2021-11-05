@@ -18,6 +18,7 @@ import (
 	"strings"
 	"unicode"
 
+	"github.com/davecgh/go-spew/spew"
 	"github.com/sergi/go-diff/diffmatchpatch"
 )
 
@@ -42,6 +43,11 @@ func (c *Classifier) score(id string, unknown, known *indexedDocument, unknownSt
 
 	start, end := diffRange(known.norm, diffs)
 	distance := scoreDiffs(id, diffs[start:end])
+
+	if c.tc.traceScoring(known.s.origin) {
+		c.tc.trace("Diffs against %s:\n%s", known.s.origin, spew.Sdump(diffs[start:end]))
+	}
+
 	if distance < 0 {
 		// If the distance is negative, this indicates an unacceptable diff so we return a zero-confidence match.
 		if c.tc.traceScoring(known.s.origin) {
@@ -126,7 +132,7 @@ func scoreDiffs(id string, diffs []diffmatchpatch.Diff) int {
 	// previously cached.
 	prevText := ""
 	prevDelete := ""
-	for _, diff := range diffs {
+	for i, diff := range diffs {
 		text := diff.Text
 		switch diff.Type {
 		case diffmatchpatch.DiffInsert:
@@ -169,6 +175,16 @@ func scoreDiffs(id string, diffs []diffmatchpatch.Diff) int {
 				if strings.HasPrefix(id, k) {
 					for _, p := range ps {
 						if strings.Index(text, p) != -1 {
+							// Check to make sure there isn't a corresponding diff for this
+							// insert that also contains the text. This prevents against diff
+							// blocks that are too big and force a false hit on this check,
+							// which usually happens with URLs since they are stored in one
+							// token but can happen in other cases as well. We don't look just
+							// for delete diffs because the subsequent text may reference the
+							// content in case a URL was truncated.
+							if i+1 < len(diffs) && strings.Index(diffs[i+1].Text, p) != -1 {
+								continue
+							}
 							return introducedPhraseChange
 						}
 					}
