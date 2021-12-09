@@ -327,6 +327,34 @@ func TestNormalize(t *testing.T) {
 			input: "   License  ",
 			want:  "License",
 		},
+		{
+			// This tests that the line breaks in the input text are properly
+			// preserved, which is important for visual diffing.
+			input: `Preserving
+line
+
+breaks is important`,
+			want: `Preserving
+line
+
+breaks is important`,
+		},
+		{
+			// This tests that soft EOL functionality doesn't affect normalized output
+			input: `This is a sentence looking construct. This is another sentence. What happens?`,
+			want:  `This is a sentence looking construct This is another sentence What happens`,
+		},
+		{
+			input: `header
+........................ This is oddly formatted`,
+			want: `header
+This is oddly formatted`,
+		},
+		{
+			input: `baseball basket-
+ball football`,
+			want: "baseball basketball\nfootball",
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.input, func(t *testing.T) {

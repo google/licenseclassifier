@@ -83,10 +83,10 @@ func normalizeDoc(in []byte, normWords bool) string {
 func tokenize(in []byte) *document {
 	// tokenize produces a document from the input content.
 	text := normalizeDoc(in, true)
-	return extractDoc(text)
+	return extractDoc(text, true)
 }
 
-func extractDoc(text string) *document {
+func extractDoc(text string, removeEol bool) *document {
 	var doc document
 	// Iterate on a line-by-line basis.
 	i := 0
@@ -138,9 +138,13 @@ func extractDoc(text string) *document {
 					// follow this text. This resolves problems with licenses that are a
 					// very long line of text, motivated by
 					// https://github.com/microsoft/TypeScript/commit/6e6e570d57b6785335668e30b63712e41f89bf74#diff-e60c8cd1bc09b7c4e1bf79c769c9c120L109
-					doc.Tokens = append(doc.Tokens, &token{
-						Text: eol,
-						Line: i + 1})
+					//
+					// Don't do this if the previous token was already an EOL
+					if doc.Tokens[len(doc.Tokens)-1].Text != eol {
+						doc.Tokens = append(doc.Tokens, &token{
+							Text: eol,
+							Line: i + 1})
+					}
 				}
 
 				tok := token{
@@ -155,17 +159,13 @@ func extractDoc(text string) *document {
 				firstInLine = false
 			}
 		}
-		tok := token{
-			Text: eol,
-			Line: i + 1,
-		}
-		doc.Tokens = append(doc.Tokens, &tok)
 	}
-	doc.Tokens = cleanupTokens(doc.Tokens)
+
+	doc.Tokens = cleanupTokens(doc.Tokens, removeEol)
 	return &doc
 }
 
-func cleanupTokens(in []*token) []*token {
+func cleanupTokens(in []*token, removeEol bool) []*token {
 	// This routine performs sanitization of tokens. If it is a header-looking
 	// token (but not a version number) starting a line, it is removed.
 	// Hyphenated words are reassembled.
@@ -179,6 +179,15 @@ func cleanupTokens(in []*token) []*token {
 		}
 		if tok.Text == eol {
 			firstInLine = true
+			if removeEol {
+				continue
+			}
+			// If we are reconstructing a hyphenated word, don't append the EOL
+			// now, do it when the word is reconstructed.
+			if partialWord == "" {
+				out = append(out, &token{Text: eol, Line: tok.Line, Index: tokIdx})
+				tokIdx++
+			}
 			continue
 		}
 		firstInLine = false
@@ -195,6 +204,12 @@ func cleanupTokens(in []*token) []*token {
 			tp.Previous = ""
 			out = append(out, tp)
 			tokIdx++
+			if !removeEol {
+				// Append the EOL now that the whole word is recovered
+				out = append(out, &token{Text: eol, Line: tp.Line, Index: tokIdx})
+				tokIdx++
+			}
+
 			partialWord = ""
 		} else {
 			tok.Text = t
@@ -344,7 +359,7 @@ var ignorableTexts = []*regexp.Regexp{
 // classification
 func removeIgnorableTexts(s string) string {
 	var out []string
-	lines := strings.Split(strings.TrimRight(s, "\n"), "\n")
+	lines := strings.Split(s, "\n")
 	for _, l := range lines {
 		line := strings.TrimSpace(l)
 		var match bool
@@ -360,5 +375,5 @@ func removeIgnorableTexts(s string) string {
 			out = append(out, "")
 		}
 	}
-	return strings.Join(out, "\n") + "\n"
+	return strings.Join(out, "\n")
 }
