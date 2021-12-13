@@ -223,7 +223,7 @@ func NewClassifier(threshold float64) *Classifier {
 // return the same results as Match(in).
 func (c *Classifier) Normalize(in []byte) []byte {
 	text := normalizeDoc(in, false)
-	doc := extractDoc(text, false)
+	doc := extractDoc(text)
 
 	var buf bytes.Buffer
 
@@ -235,25 +235,11 @@ func (c *Classifier) Normalize(in []byte) []byte {
 		return buf.Bytes()
 	}
 
-	prevLine := 1
 	buf.WriteString(doc.Tokens[0].Text)
+
 	for _, t := range doc.Tokens[1:] {
-		// Only write out an EOL token that incremented the line
-		if t.Line == prevLine+1 {
-			buf.WriteString("\n")
-		}
-
-		// Only write tokens that aren't EOL
-		if t.Text != eol {
-			// Only put a space between tokens if the previous token was on the same
-			// line. This prevents spaces after an EOL
-			if t.Line == prevLine {
-				buf.WriteString(" ")
-			}
-			buf.WriteString(t.Text)
-		}
-
-		prevLine = t.Line
+		buf.WriteString(" ")
+		buf.WriteString(t.Text)
 	}
 	return buf.Bytes()
 }
