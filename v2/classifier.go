@@ -151,13 +151,14 @@ func (c *Classifier) match(in []byte) Results {
 				}
 			} else if overlaps(c, o) && retain[j] {
 				// if the ending and start lines exactly overlap, it's OK to keep both
-				if c.StartLine == o.EndLine {
-					keep = true
-				} else {
+				if c.StartLine != o.EndLine {
 					keep = false
 				}
 			}
 
+			if !keep {
+				break
+			}
 		}
 		if keep {
 			retain[i] = true
