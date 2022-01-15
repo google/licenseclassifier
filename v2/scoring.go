@@ -200,8 +200,9 @@ func scoreDiffs(id string, diffs []diffmatchpatch.Diff) int {
 				// GPL instead of the LGPL. This is fine from a licensing perspective,
 				// but we need to tweak matching to ignore that particular case. In
 				// other circumstances, inserting or removing the word Lesser in the
-				// GPL context is not an acceptable change.
-				if !strings.Contains(prevText, "warranty") {
+				// GPL context is not an acceptable change. There is also a reference to
+				// it when suggesting to use the LGPL.
+				if !strings.Contains(prevText, "warranty") && !strings.Contains(prevText, "is covered by the gnu") {
 					return lesserGPLChange
 				}
 			}
@@ -210,9 +211,12 @@ func scoreDiffs(id string, diffs []diffmatchpatch.Diff) int {
 			prevDelete = ""
 
 		case diffmatchpatch.DiffDelete:
-			if text == "lesser" && strings.HasSuffix(prevText, "gnu") {
+			// Avoid substitution in most cases. The two exceptions are with usage
+			// statements that are talking about *another* license, and don't affect
+			// the detection of the current license.
+			if (text == "lesser" || text == "library") && strings.HasSuffix(prevText, "gnu") {
 				// Same as above to avoid matching GPL instead of LGPL here.
-				if !strings.Contains(prevText, "warranty") {
+				if !strings.Contains(prevText, "warranty") && !strings.Contains(prevText, "is covered by the gnu") {
 					return lesserGPLChange
 				}
 			}

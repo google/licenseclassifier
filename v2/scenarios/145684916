@@ -1,5 +1,5 @@
 Legacy classifier identifies GPL-1.0
-EXPECTED:GPL-2.0
+EXPECTED:LGPL-2.0
 /* Provide relocatable packages.
    Copyright (C) 2003 Free Software Foundation, Inc.
    Written by Bruno Haible <bruno@clisp.org>, 2003.
@@ -15,7 +15,7 @@ EXPECTED:GPL-2.0
    Library General Public License for more details.
 
    You should have received a copy of the GNU Library General Public
-   License along with this program; if not, write to the Free Software
+   License along with this library; if not, write to the Free Software
    Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307,
    USA.  */
 
