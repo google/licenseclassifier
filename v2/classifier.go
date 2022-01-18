@@ -71,6 +71,11 @@ func (c *Classifier) match(in []byte) Results {
 	firstPass := make(map[string]*indexedDocument)
 	for l, d := range c.docs {
 		sim := id.tokenSimilarity(d)
+
+		if c.tc.traceTokenize(l) {
+			c.tc.trace("Token similarity for %s: %.2f", l, sim)
+		}
+
 		if sim >= c.threshold {
 			firstPass[l] = d
 		}
