@@ -168,6 +168,7 @@ func scoreDiffs(id string, diffs []diffmatchpatch.Diff) int {
 				"PHP":                              {"php"},
 				"SISSL":                            {"sun standards"},
 				"SGI-B":                            {"silicon graphics"},
+				"SunPro":                           {"sunpro"},
 				"X11":                              {"x consortium"},
 			}
 
