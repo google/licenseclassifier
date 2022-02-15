@@ -37,7 +37,7 @@ type scenario struct {
 }
 
 var defaultThreshold = .8
-var baseLicenses = "./licenses"
+var baseLicenses = "assets"
 
 func classifier() (*Classifier, error) {
 	c := NewClassifier(defaultThreshold)
@@ -275,27 +275,19 @@ func TestLicenseName(t *testing.T) {
 		want  string
 	}{
 		{
-			input: "example",
+			input: "License/example/file.txt",
 			want:  "example",
 		},
 		{
-			input: "example.txt",
+			input: "License/example/a.txt",
 			want:  "example",
 		},
 		{
-			input: "example_a",
+			input: "Header/example/header.txt",
 			want:  "example",
 		},
 		{
-			input: "example.header",
-			want:  "example",
-		},
-		{
-			input: "example.header",
-			want:  "example",
-		},
-		{
-			input: "example_a.header.txt",
+			input: "Header/example/a.txt",
 			want:  "example",
 		},
 	}

@@ -15,7 +15,11 @@
 // Package classifier provides the implementation of the v2 license classifier.
 package classifier
 
-import "strings"
+import (
+	"fmt"
+	"os"
+	"strings"
+)
 
 type tokenID int // type to ensure safety when manipulating token identifiers.
 
@@ -96,21 +100,22 @@ func max(a, b int) int {
 
 // AddContent incorporates the provided textual content into the classifier for
 // matching. This will not modify the supplied content.
-func (c *Classifier) AddContent(name string, content []byte) {
+func (c *Classifier) AddContent(category, name, variant string, content []byte) {
 	doc := tokenize(content)
-	c.addDocument(name, doc)
+	c.addDocument(category, name, variant, doc)
 }
 
 // addDocument takes a textual document and incorporates it into the classifier for matching.
-func (c *Classifier) addDocument(name string, doc *document) {
+func (c *Classifier) addDocument(category, name, variant string, doc *document) {
 	// For documents that are part of the corpus, we add them to the dictionary and
 	// compute their associated search data eagerly so they are ready for matching against
 	// candidates.
+	indexName := c.generateDocName(category, name, variant)
 	id := c.generateIndexedDocument(doc, true)
 	id.generateFrequencies()
 	id.generateSearchSet(c.q)
-	id.s.origin = name
-	c.docs[name] = id
+	id.s.origin = indexName
+	c.docs[indexName] = id
 }
 
 // generateIndexedDocument creates an indexedDocument from the supplied document. if addWords
@@ -148,6 +153,13 @@ func (c *Classifier) generateIndexedDocument(d *document, addWords bool) *indexe
 func (c *Classifier) createTargetIndexedDocument(in []byte) *indexedDocument {
 	doc := tokenize(in)
 	return c.generateIndexedDocument(doc, false)
+}
+
+func (c *Classifier) generateDocName(category, name, variant string) string {
+	return fmt.Sprintf("%s%c%s%c%s", category, os.PathSeparator, name, os.PathSeparator, variant)
+}
+func (c *Classifier) getIndexedDocument(category, name, variant string) *indexedDocument {
+	return c.docs[c.generateDocName(category, name, variant)]
 }
 
 // dictionary is used to intern all the token words encountered in the text corpus.

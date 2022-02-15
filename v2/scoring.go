@@ -173,7 +173,7 @@ func scoreDiffs(id string, diffs []diffmatchpatch.Diff) int {
 			}
 
 			for k, ps := range inducedPhrases {
-				if strings.HasPrefix(id, k) {
+				if strings.HasPrefix(LicenseName(id), k) {
 					for _, p := range ps {
 						if strings.Index(text, p) != -1 {
 							// Check to make sure there isn't a corresponding diff for this

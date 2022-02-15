@@ -20,7 +20,6 @@ import (
 	"io"
 	"io/ioutil"
 	"os"
-	"path"
 	"path/filepath"
 	"sort"
 	"strings"
@@ -283,14 +282,16 @@ func (c *Classifier) LoadLicenses(dir string) error {
 	}
 
 	for _, f := range files {
-		_, name := path.Split(f)
-		name = strings.Replace(name, ".txt", "", 1)
+		relativePath := strings.Replace(f, dir, "", 1)
+		sep := fmt.Sprintf("%c", os.PathSeparator)
+		segments := strings.Split(relativePath, sep)
+		category, name, variant := segments[1], segments[2], segments[3]
 		b, err := ioutil.ReadFile(f)
 		if err != nil {
 			return err
 		}
 
-		c.AddContent(name, []byte(string(b)))
+		c.AddContent(category, name, variant, []byte(string(b)))
 	}
 	return nil
 }
@@ -317,26 +318,15 @@ func (c *Classifier) MatchFrom(in io.Reader) (Results, error) {
 }
 
 func detectionType(in string) string {
-	if strings.Index(in, ".header") != -1 {
-		return "Header"
-	}
-	return "License"
+	splits := strings.Split(in, fmt.Sprintf("%c", os.PathSeparator))
+	return splits[0]
 }
 
 // LicenseName produces the output name for a license, removing the internal structure
 // of the filename in use.
 func LicenseName(in string) string {
-	out := in
-	if idx := strings.Index(out, ".txt"); idx != -1 {
-		out = out[0:idx]
-	}
-	if idx := strings.Index(out, "_"); idx != -1 {
-		out = out[0:idx]
-	}
-	if idx := strings.Index(out, ".header"); idx != -1 {
-		out = out[0:idx]
-	}
-	return out
+	splits := strings.Split(in, fmt.Sprintf("%c", os.PathSeparator))
+	return splits[1]
 }
 
 // contains returns true iff b is completely inside a

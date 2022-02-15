@@ -97,8 +97,8 @@ func TestSearchSet_New(t *testing.T) {
 				trace.WriteString(fmt.Sprintf(f, args...))
 			},
 		})
-		c.AddContent("text", []byte(tt.text))
-		if got := newSearchSet(c.docs["text"], tt.q); !reflect.DeepEqual(got, tt.want) {
+		c.AddContent("", "text", "", []byte(tt.text))
+		if got := newSearchSet(c.getIndexedDocument("", "text", ""), tt.q); !reflect.DeepEqual(got, tt.want) {
 			t.Errorf("New(%q) = %+v, want %+v", tt.description, spew.Sdump(got), spew.Sdump(tt.want))
 			t.Errorf("Trace:\n%s", trace.String())
 		}
@@ -153,11 +153,11 @@ func TestFindPotentialMatches(t *testing.T) {
 					trace.WriteString(fmt.Sprintf(f, args...))
 				},
 			})
-			c.AddContent("source", []byte(test.src))
+			c.AddContent("", "source", "", []byte(test.src))
 
 			doc := c.createTargetIndexedDocument([]byte(test.target))
 			doc.generateSearchSet(c.q)
-			hits := c.findPotentialMatches(c.docs["source"].s, doc.s, test.confidence)
+			hits := c.findPotentialMatches(c.getIndexedDocument("", "source", "").s, doc.s, test.confidence)
 			if actual := len(hits); actual != test.expectedHits {
 				t.Errorf("got %d hits, wanted %d", actual, test.expectedHits)
 				t.Errorf("Trace:\n%s", trace.String())

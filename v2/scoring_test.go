@@ -101,11 +101,13 @@ func TestScoreDiffs(t *testing.T) {
 	}{
 		{
 			name:     "identical text",
+			license:  "License/MIT/license.txt",
 			diffs:    nil,
 			expected: 0,
 		},
 		{
-			name: "acceptable change",
+			name:    "acceptable change",
+			license: "License/MIT/license.txt",
 			diffs: []diffmatchpatch.Diff{
 				{
 					Type: diffmatchpatch.DiffEqual,
@@ -123,7 +125,8 @@ func TestScoreDiffs(t *testing.T) {
 			expected: 2,
 		},
 		{
-			name: "version change",
+			name:    "version change",
+			license: "License/MIT/license.txt",
 			diffs: []diffmatchpatch.Diff{
 				{
 					Type: diffmatchpatch.DiffEqual,
@@ -137,7 +140,8 @@ func TestScoreDiffs(t *testing.T) {
 			expected: versionChange,
 		},
 		{
-			name: "license name change by deletion",
+			name:    "license name change by deletion",
+			license: "License/MIT/license.txt",
 			diffs: []diffmatchpatch.Diff{
 				{
 					Type: diffmatchpatch.DiffEqual,
@@ -151,7 +155,8 @@ func TestScoreDiffs(t *testing.T) {
 			expected: lesserGPLChange,
 		},
 		{
-			name: "license name change by insertion",
+			name:    "license name change by insertion",
+			license: "License/MIT/license.txt",
 			diffs: []diffmatchpatch.Diff{
 				{
 					Type: diffmatchpatch.DiffEqual,
@@ -166,7 +171,7 @@ func TestScoreDiffs(t *testing.T) {
 		},
 		{
 			name:    "license name change by name insertion",
-			license: "ImageMagick",
+			license: "License/ImageMagick/license.txt",
 			diffs: []diffmatchpatch.Diff{
 				{
 					Type: diffmatchpatch.DiffEqual,
@@ -271,10 +276,12 @@ func TestScore(t *testing.T) {
 					trace.WriteString(fmt.Sprintf(f, args...))
 				},
 			})
-			c.AddContent("known", []byte(test.known))
-			kd := c.docs["known"]
+			c.AddContent("", "known", "", []byte(test.known))
+			kd := c.getIndexedDocument("", "known", "")
 			ud := c.createTargetIndexedDocument([]byte(test.unknown))
-			conf, so, eo := c.score(test.name, ud, kd, 0, ud.size())
+			// The name for the test needs to look like an asset path so we prepend
+			// the directory.
+			conf, so, eo := c.score("License/"+test.name, ud, kd, 0, ud.size())
 
 			success := true
 			if conf != test.expectedConf {
