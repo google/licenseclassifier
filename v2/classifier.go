@@ -30,6 +30,7 @@ type Match struct {
 	Name            string
 	Confidence      float64
 	MatchType       string
+	Variant         string
 	StartLine       int
 	EndLine         int
 	StartTokenIndex int
@@ -100,6 +101,7 @@ func (c *Classifier) match(in []byte) Results {
 			if conf >= c.threshold && (endIndex-startIndex-startOffset-endOffset) > 0 {
 				candidates = append(candidates, &Match{
 					Name:            LicenseName(l),
+					Variant:         variantName(l),
 					MatchType:       detectionType(l),
 					Confidence:      conf,
 					StartLine:       id.Tokens[startIndex+startOffset].Line,
@@ -320,6 +322,11 @@ func (c *Classifier) MatchFrom(in io.Reader) (Results, error) {
 func detectionType(in string) string {
 	splits := strings.Split(in, fmt.Sprintf("%c", os.PathSeparator))
 	return splits[0]
+}
+
+func variantName(in string) string {
+	splits := strings.Split(in, fmt.Sprintf("%c", os.PathSeparator))
+	return splits[2]
 }
 
 // LicenseName produces the output name for a license, removing the internal structure
