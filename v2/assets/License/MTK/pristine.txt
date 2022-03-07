@@ -1,5 +1,3 @@
-Copyright Statement:
-
 This software/firmware and related documentation ("MediaTek Software") are
 protected under relevant copyright laws. The information contained herein
 is confidential and proprietary to MediaTek Inc. and/or its licensors.
