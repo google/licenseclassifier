@@ -213,7 +213,6 @@ func NewClassifier(threshold float64) *Classifier {
 // line-separated text which is the basis for position values returned by the
 // classifier.
 //
-//
 // 1. Breaks up long lines of text. This helps with detecting licenses like in
 // TODO(wcn):URL reference
 //

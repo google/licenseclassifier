@@ -20,28 +20,28 @@
 //
 // Example Usage:
 //
-//   type Text struct {
-//     Name string
-//     Text string
-//   }
+//	type Text struct {
+//	  Name string
+//	  Text string
+//	}
 //
-//   func NewClassifier(knownTexts []Text) (*stringclassifier.Classifier, error) {
-//     sc := stringclassifier.New(stringclassifier.FlattenWhitespace)
-//     for _, known := range knownTexts {
-//       if err := sc.AddValue(known.Name, known.Text); err != nil {
-//         return nil, err
-//       }
-//     }
-//     return sc, nil
-//   }
+//	func NewClassifier(knownTexts []Text) (*stringclassifier.Classifier, error) {
+//	  sc := stringclassifier.New(stringclassifier.FlattenWhitespace)
+//	  for _, known := range knownTexts {
+//	    if err := sc.AddValue(known.Name, known.Text); err != nil {
+//	      return nil, err
+//	    }
+//	  }
+//	  return sc, nil
+//	}
 //
-//   func IdentifyTexts(sc *stringclassifier.Classifier, unknownTexts []*Text) {
-//     for _, unknown := range unknownTexts {
-//       m := sc.NearestMatch(unknown.Text)
-//       log.Printf("The nearest match to %q is %q (confidence: %v)",
-//         unknown.Name, m.Name, m.Confidence)
-//     }
-//   }
+//	func IdentifyTexts(sc *stringclassifier.Classifier, unknownTexts []*Text) {
+//	  for _, unknown := range unknownTexts {
+//	    m := sc.NearestMatch(unknown.Text)
+//	    log.Printf("The nearest match to %q is %q (confidence: %v)",
+//	      unknown.Name, m.Name, m.Confidence)
+//	  }
+//	}
 package stringclassifier
 
 import (
