@@ -21,16 +21,16 @@
 // Matching occurs by "mapping" ranges from the source text into the target
 // text but still retaining the source order:
 //
-//   SOURCE: |-----------------------------|
+//	SOURCE: |-----------------------------|
 //
-//   TARGET: |*****************************************|
+//	TARGET: |*****************************************|
 //
-//   MAP SOURCE SECTIONS ONTO TARGET IN SOURCE ORDER:
+//	MAP SOURCE SECTIONS ONTO TARGET IN SOURCE ORDER:
 //
-//     S:  |-[--]-----[---]------[----]------|
-//            /         |           \
-//         |---|   |---------|   |-------------|
-//     T: |*****************************************|
+//	  S:  |-[--]-----[---]------[----]------|
+//	         /         |           \
+//	      |---|   |---------|   |-------------|
+//	  T: |*****************************************|
 //
 // Note that a single source range may match many different ranges in the
 // target. The matching algorithm untangles these so that all matched ranges
@@ -327,10 +327,10 @@ func targetMatchedRanges(src, target *SearchSet) MatchRanges {
 // happens when more than one source range maps to the same target range.
 // E.g.:
 //
-//     SrcStart: 20, SrcEnd: 30, TargetStart: 127, TargetEnd: 137
-//  1: SrcStart: 12, SrcEnd: 17, TargetStart: 138, TargetEnd: 143
-//  2: SrcStart: 32, SrcEnd: 37, TargetStart: 138, TargetEnd: 143
-//     SrcStart: 38, SrcEnd: 40, TargetStart: 144, TargetEnd: 146
+//	   SrcStart: 20, SrcEnd: 30, TargetStart: 127, TargetEnd: 137
+//	1: SrcStart: 12, SrcEnd: 17, TargetStart: 138, TargetEnd: 143
+//	2: SrcStart: 32, SrcEnd: 37, TargetStart: 138, TargetEnd: 143
+//	   SrcStart: 38, SrcEnd: 40, TargetStart: 144, TargetEnd: 146
 //
 // Here (1) is out of order, because the source range [12, 17) is out of
 // sequence with the surrounding source sequences, but [32, 37) is.

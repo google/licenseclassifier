@@ -74,7 +74,7 @@ type FileClassifications struct {
 	Classifications Classifications
 }
 
-//JSONResult is the format for the jr JSON file
+// JSONResult is the format for the jr JSON file
 type JSONResult []*FileClassifications
 
 func (jr JSONResult) Len() int           { return len(jr) }

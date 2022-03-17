@@ -45,7 +45,7 @@ func classifier() (*Classifier, error) {
 }
 
 func getScenarioFilenames() ([]string, error) {
-	scenarios := "./scenarios"
+	scenarios := "scenarios"
 	var files []string
 	err := filepath.Walk(path.Join(scenarios), func(path string, info os.FileInfo, err error) error {
 		if err != nil {
