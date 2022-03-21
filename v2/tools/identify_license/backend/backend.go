@@ -25,9 +25,9 @@ import (
 
 	//gc "google3/devtools/compliance/common/licenseclassifier/classifier"
 
-	"github.com/google/licenseclassifier/tools/identify_license/results/v2"
 	classifier "github.com/google/licenseclassifier/v2"
 	"github.com/google/licenseclassifier/v2/assets"
+	"github.com/google/licenseclassifier/v2/tools/identify_license/results"
 )
 
 // ClassifierInterface is the interface each backend must implement.

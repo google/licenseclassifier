@@ -43,9 +43,9 @@ import (
 	"sort"
 	"time"
 
-	"github.com/google/licenseclassifier/tools/identify_license/backend/v2"
-	"github.com/google/licenseclassifier/tools/identify_license/results/v2"
 	classifier "github.com/google/licenseclassifier/v2"
+	"github.com/google/licenseclassifier/v2/tools/identify_license/backend"
+	"github.com/google/licenseclassifier/v2/tools/identify_license/results"
 )
 
 var (
