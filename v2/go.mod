@@ -1,6 +1,6 @@
 module github.com/google/licenseclassifier/v2
 
-go 1.15
+go 1.16
 
 require (
 	github.com/davecgh/go-spew v1.1.1
