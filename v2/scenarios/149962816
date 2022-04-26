@@ -1,5 +1,5 @@
 Legacy classifier identifies GPL-2.1
-EXPECTED:LGPL-2.1
+EXPECTED:Copyright,LGPL-2.1
 /*
    Copyright (C) 2010 by Ronnie Sahlberg <ronniesahlberg@gmail.com>
 

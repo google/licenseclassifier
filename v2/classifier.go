@@ -92,6 +92,8 @@ func (c *Classifier) match(in []byte) Results {
 	id.generateSearchSet(c.q)
 
 	var candidates Matches
+	candidates = append(candidates, id.Matches...)
+
 	for l, d := range firstPass {
 		matches := c.findPotentialMatches(d.s, id.s, c.threshold)
 		for _, m := range matches {
@@ -228,8 +230,8 @@ func NewClassifier(threshold float64) *Classifier {
 // It is an invariant of the classifier that calling Match(Normalize(in)) will
 // return the same results as Match(in).
 func (c *Classifier) Normalize(in []byte) []byte {
-	text := normalizeDoc(in, false)
-	doc := extractDoc(text, false)
+	text, _ := normalizeDoc(in, false)
+	doc := extractDoc(text, false, nil)
 
 	var buf bytes.Buffer
 

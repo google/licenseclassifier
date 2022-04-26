@@ -1,5 +1,5 @@
 Legacy classifier identifies GPL-3.0.
-EXPECTED:LGPL-3.0
+EXPECTED:Copyright,LGPL-3.0
 /*
  * Python bindings module for liblnk (pylnk)
  *

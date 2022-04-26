@@ -133,6 +133,7 @@ The AWESOME Project`,
 						Line:  10,
 					},
 				},
+				Matches: Matches{&Match{Name: "Copyright", Confidence: 1.0, MatchType: "Copyright", StartLine: 6, EndLine: 6}},
 			},
 		},
 	}

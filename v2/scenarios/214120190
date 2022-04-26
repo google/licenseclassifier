@@ -1,5 +1,5 @@
 Code to prevent LGPL/GPL misdetections only worked for LGPL-2.1, not LGPL-2.0
-EXPECTED:LGPL-2.0
+EXPECTED:Copyright,LGPL-2.0
 /* glib-unix.h - Unix specific integration
  * Copyright (C) 2011 Red Hat, Inc.
  *

@@ -1,5 +1,5 @@
 Legacy classifier doesn't recognize Ruby license.
-EXPECTED:Apache-2.0,MIT,Ruby
+EXPECTED:Apache-2.0,Copyright,MIT,Ruby
    Puppet - Automating Configuration Management.
 
    Copyright (C) 2005-2016 Puppet, Inc.

@@ -66,28 +66,29 @@ func cleanupToken(in string) string {
 	return out.String()
 }
 
-func normalizeDoc(in []byte, normWords bool) string {
+func normalizeDoc(in []byte, normWords bool) (string, Matches) {
 	// Apply the global transforms described in SPDX
 
 	norm := string(in)
 	norm = html.UnescapeString(norm)
 	norm = normalizePunctuation(norm)
-	norm = removeIgnorableTexts(norm)
+	norm, matches := removeIgnorableTexts(norm)
 
 	if normWords {
 		norm = normalizeWords(norm)
 	}
-	return norm
+	return norm, matches
 }
 
 func tokenize(in []byte) *document {
 	// tokenize produces a document from the input content.
-	text := normalizeDoc(in, true)
-	return extractDoc(text, true)
+	text, matches := normalizeDoc(in, true)
+	return extractDoc(text, true, matches)
 }
 
-func extractDoc(text string, removeEol bool) *document {
+func extractDoc(text string, removeEol bool, matches Matches) *document {
 	var doc document
+	doc.Matches = matches
 	// Iterate on a line-by-line basis.
 	i := 0
 	pos := 0
@@ -357,10 +358,11 @@ var ignorableTexts = []*regexp.Regexp{
 
 // removeIgnorableTexts removes common text, which is not important for
 // classification
-func removeIgnorableTexts(s string) string {
+func removeIgnorableTexts(s string) (string, Matches) {
 	var out []string
+	var matches Matches
 	lines := strings.Split(s, "\n")
-	for _, l := range lines {
+	for i, l := range lines {
 		line := strings.TrimSpace(l)
 		var match bool
 		for _, re := range ignorableTexts {
@@ -373,7 +375,8 @@ func removeIgnorableTexts(s string) string {
 		} else {
 			// We want to preserve line presence for the positional information
 			out = append(out, "")
+			matches = append(matches, &Match{Name: "Copyright", MatchType: "Copyright", Confidence: 1.0, StartLine: i + 1, EndLine: i + 1})
 		}
 	}
-	return strings.Join(out, "\n")
+	return strings.Join(out, "\n"), matches
 }

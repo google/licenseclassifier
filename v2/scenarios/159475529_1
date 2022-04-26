@@ -1,5 +1,5 @@
 Classifier tried to induce match with AGPL.
-EXPECTED:GPL-3.0
+EXPECTED:Copyright,GPL-3.0
 #!/bin/sh
 
 #  Build tools for testing GCC.

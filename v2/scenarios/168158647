@@ -1,5 +1,5 @@
 GPL versioning construct is different than existing templates.
-EXPECTED:GPL-2.0
+EXPECTED:Copyright,GPL-2.0
 File src/zone.c
 	Copyright © 2011 Mathijs Mohlmann
 	License: GNU General Public License

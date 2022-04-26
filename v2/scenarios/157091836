@@ -1,5 +1,5 @@
 Legacy classifier identifies LGPL-2.1
-EXPECTED:LGPL-3.0
+EXPECTED:Copyright,LGPL-3.0
 /**
  * @license
  *                    GNU LESSER GENERAL PUBLIC LICENSE
