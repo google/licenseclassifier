@@ -33,7 +33,8 @@ type token struct {
 
 // document is the representation of the input text for downstream filtering and matching.
 type document struct {
-	Tokens []*token // ordered tokens of the document
+	Tokens  []*token // ordered tokens of the document
+	Matches Matches  // these are matches identified while processing the original, untokenized text via regexp matching
 }
 
 type indexedToken struct {
@@ -43,12 +44,13 @@ type indexedToken struct {
 }
 
 type indexedDocument struct {
-	Tokens []indexedToken  // ordered tokens of the document
-	f      *frequencyTable // frequencies computed for this document
-	dict   *dictionary     // The corpus dictionary for this document
-	s      *searchSet      // The searchset for this document
-	runes  []rune
-	norm   string // The normalized token sequence
+	Tokens  []indexedToken  // ordered tokens of the document
+	Matches Matches         // these are matches identified while processing the original, untokenized text via regexp matching
+	f       *frequencyTable // frequencies computed for this document
+	dict    *dictionary     // The corpus dictionary for this document
+	s       *searchSet      // The searchset for this document
+	runes   []rune
+	norm    string // The normalized token sequence
 }
 
 func (d *indexedDocument) generateSearchSet(q int) {
@@ -122,8 +124,9 @@ func (c *Classifier) addDocument(category, name, variant string, doc *document) 
 // is true, the classifier dictionary is updated with new tokens encountered in the document.
 func (c *Classifier) generateIndexedDocument(d *document, addWords bool) *indexedDocument {
 	id := &indexedDocument{
-		Tokens: make([]indexedToken, 0, len(d.Tokens)),
-		dict:   c.dict,
+		Tokens:  make([]indexedToken, 0, len(d.Tokens)),
+		dict:    c.dict,
+		Matches: d.Matches,
 	}
 
 	for _, t := range d.Tokens {

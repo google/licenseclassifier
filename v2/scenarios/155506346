@@ -1,5 +1,5 @@
 Legacy classifier identifies LGPL-3
-EXPECTED:LGPL-2.1
+EXPECTED:Copyright,LGPL-2.1
 /* Extended regular expression matching and search library.
    Copyright (C) 2002, 2003, 2005 Free Software Foundation, Inc.
    This file is part of the GNU C Library.

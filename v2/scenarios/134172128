@@ -1,5 +1,5 @@
 Legacy classifier doesn't detect header
-EXPECTED:Apache-2.0
+EXPECTED:Apache-2.0,Copyright
 /**
  * Copyright 2019 Google LLC
  *

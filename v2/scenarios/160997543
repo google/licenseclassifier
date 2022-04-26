@@ -1,5 +1,5 @@
 Test for an approximate match on libtiff
-EXPECTED:libtiff
+EXPECTED:Copyright,libtiff
 Copyright (c) 2000-2017 Todd M. Helfter
 
 Permission to use, copy, modify, distribute, and sell this software and

@@ -1,5 +1,5 @@
 New header for GPL-3.0 with Bison exception
-EXPECTED:GPL-3.0-with-bison-exception
+EXPECTED:Copyright,GPL-3.0-with-bison-exception
 * A Bison parser, made by GNU Bison 3.0.4.  */
 
 /* Bison interface for Yacc-like parsers in C

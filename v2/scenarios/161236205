@@ -1,5 +1,5 @@
 Add the Sun variant of BSD-3-Clause to the corpus.
-EXPECTED:BSD-3-Clause
+EXPECTED:BSD-3-Clause,Copyright
 Copyright (c) 2003 Sun Microsystems, Inc.  All Rights Reserved.
 
 Redistribution and use in source and binary forms, with or without

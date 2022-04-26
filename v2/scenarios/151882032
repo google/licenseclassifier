@@ -1,5 +1,5 @@
 Legacy classifier identifies BSD-4 clause.
-EXPECTED:BSD-3-Clause
+EXPECTED:BSD-3-Clause,Copyright
 ***
  * ASM: a very small and fast Java bytecode manipulation framework
  * Copyright (c) 2000-2011 INRIA, France Telecom

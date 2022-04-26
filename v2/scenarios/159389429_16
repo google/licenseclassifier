@@ -1,5 +1,5 @@
 Legacy classifier identifies GPL-1.0
-EXPECTED:GPL-3.0
+EXPECTED:Copyright,GPL-3.0
 ;;; package-lint-flymake.el --- A package-lint Flymake backend  -*- lexical-binding: t; -*-
 
 ;; Copyright (C) 2018 J. Alexander Branham (alex DOT branham AT gmail DOT com)

@@ -1,5 +1,5 @@
 Legacy classifier identifies LGPL-3.0.
-EXPECTED:GPL-3.0
+EXPECTED:Copyright,GPL-3.0
 // Copyright (C) 2011-2014 Free Software Foundation, Inc.
 //
 // This file is part of the GNU ISO C++ Library.  This library is free
