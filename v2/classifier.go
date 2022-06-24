@@ -287,6 +287,10 @@ func (c *Classifier) LoadLicenses(dir string) error {
 		relativePath := strings.Replace(f, dir, "", 1)
 		sep := fmt.Sprintf("%c", os.PathSeparator)
 		segments := strings.Split(relativePath, sep)
+		if len(segments) < 3 {
+			c.tc.trace("Insufficient segment count for path: %s", relativePath)
+			continue
+		}
 		category, name, variant := segments[1], segments[2], segments[3]
 		b, err := ioutil.ReadFile(f)
 		if err != nil {
