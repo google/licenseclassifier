@@ -26,7 +26,6 @@ type tokenID int // type to ensure safety when manipulating token identifiers.
 // token provides detailed information about a single textual token in the document.
 type token struct {
 	Text     string // normalized text of the token
-	Index    int    // the token's location in the tokenized document
 	Line     int    // line position of this token in the source
 	Previous string // for the first token in a line, any previous text.
 }
@@ -38,9 +37,8 @@ type document struct {
 }
 
 type indexedToken struct {
-	Index int     // the token's location in the tokenized document
-	Line  int     // line position of this token in the source
-	ID    tokenID // identifier of the text in the dictionary
+	Line int     // line position of this token in the source
+	ID   tokenID // identifier of the text in the dictionary
 }
 
 type indexedDocument struct {
@@ -138,9 +136,8 @@ func (c *Classifier) generateIndexedDocument(d *document, addWords bool) *indexe
 		}
 
 		id.Tokens = append(id.Tokens, indexedToken{
-			Index: t.Index,
-			Line:  t.Line,
-			ID:    tokID,
+			Line: t.Line,
+			ID:   tokID,
 		})
 
 	}

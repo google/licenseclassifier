@@ -186,7 +186,7 @@ func cleanupTokens(in []*token, removeEol bool) []*token {
 			// If we are reconstructing a hyphenated word, don't append the EOL
 			// now, do it when the word is reconstructed.
 			if partialWord == "" {
-				out = append(out, &token{Text: eol, Line: tok.Line, Index: tokIdx})
+				out = append(out, &token{Text: eol, Line: tok.Line})
 				tokIdx++
 			}
 			continue
@@ -201,20 +201,18 @@ func cleanupTokens(in []*token, removeEol bool) []*token {
 			// Repair hyphenated words
 			tp := in[i-1]
 			tp.Text = partialWord + t
-			tp.Index = tokIdx
 			tp.Previous = ""
 			out = append(out, tp)
 			tokIdx++
 			if !removeEol {
 				// Append the EOL now that the whole word is recovered
-				out = append(out, &token{Text: eol, Line: tp.Line, Index: tokIdx})
+				out = append(out, &token{Text: eol, Line: tp.Line})
 				tokIdx++
 			}
 
 			partialWord = ""
 		} else {
 			tok.Text = t
-			tok.Index = tokIdx
 			tok.Previous = ""
 			out = append(out, tok)
 			tokIdx++

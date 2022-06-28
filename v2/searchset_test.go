@@ -75,8 +75,8 @@ func TestSearchSet_New(t *testing.T) {
 			q:           4,
 			want: &searchSet{
 				Tokens: []indexedToken{
-					{Index: 0, Line: 1, ID: 1},
-					{Index: 1, Line: 1, ID: 2},
+					{Line: 1, ID: 1},
+					{Line: 1, ID: 2},
 				},
 				Hashes:         hash{1957950203: tokenRanges{&tokenRange{Start: 0, End: 2}}},
 				Checksums:      []uint32{1957950203},
