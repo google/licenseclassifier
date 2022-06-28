@@ -108,8 +108,8 @@ func (c *Classifier) match(in []byte) Results {
 					Confidence:      conf,
 					StartLine:       id.Tokens[startIndex+startOffset].Line,
 					EndLine:         id.Tokens[endIndex-endOffset-1].Line,
-					StartTokenIndex: id.Tokens[startIndex+startOffset].Index,
-					EndTokenIndex:   id.Tokens[endIndex-endOffset-1].Index,
+					StartTokenIndex: startIndex + startOffset,
+					EndTokenIndex:   endIndex - endOffset - 1,
 				})
 			}
 
