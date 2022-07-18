@@ -5,7 +5,7 @@ import (
 	"io/fs"
 )
 
-//go:embed *.db *.txt
+// go:embed *.db *.txt
 var licenseFS embed.FS
 
 // ReadLicenseFile locates and reads the license archive file.  Absolute paths are used unmodified.  Relative paths are expected to be in the licenses directory of the licenseclassifier package.
