@@ -30,25 +30,19 @@ type token struct {
 	Previous string // for the first token in a line, any previous text.
 }
 
-// document is the representation of the input text for downstream filtering and matching.
-type document struct {
-	Tokens  []*token // ordered tokens of the document
-	Matches Matches  // these are matches identified while processing the original, untokenized text via regexp matching
-}
-
 type indexedToken struct {
 	Line int     // line position of this token in the source
 	ID   tokenID // identifier of the text in the dictionary
 }
 
 type indexedDocument struct {
+	Norm    string          // The normalized token sequence
 	Tokens  []indexedToken  // ordered tokens of the document
 	Matches Matches         // these are matches identified while processing the original, untokenized text via regexp matching
 	f       *frequencyTable // frequencies computed for this document
 	dict    *dictionary     // The corpus dictionary for this document
 	s       *searchSet      // The searchset for this document
 	runes   []rune
-	norm    string // The normalized token sequence
 }
 
 func (d *indexedDocument) generateSearchSet(q int) {
@@ -101,58 +95,26 @@ func max(a, b int) int {
 // AddContent incorporates the provided textual content into the classifier for
 // matching. This will not modify the supplied content.
 func (c *Classifier) AddContent(category, name, variant string, content []byte) {
-	doc := tokenize(content)
+	doc := tokenize(content, c.dict, true)
 	c.addDocument(category, name, variant, doc)
 }
 
 // addDocument takes a textual document and incorporates it into the classifier for matching.
-func (c *Classifier) addDocument(category, name, variant string, doc *document) {
+func (c *Classifier) addDocument(category, name, variant string, id *indexedDocument) {
 	// For documents that are part of the corpus, we add them to the dictionary and
 	// compute their associated search data eagerly so they are ready for matching against
 	// candidates.
 	indexName := c.generateDocName(category, name, variant)
-	id := c.generateIndexedDocument(doc, true)
-	id.generateFrequencies()
 	id.generateSearchSet(c.q)
 	id.s.origin = indexName
 	c.docs[indexName] = id
-}
-
-// generateIndexedDocument creates an indexedDocument from the supplied document. if addWords
-// is true, the classifier dictionary is updated with new tokens encountered in the document.
-func (c *Classifier) generateIndexedDocument(d *document, addWords bool) *indexedDocument {
-	id := &indexedDocument{
-		Tokens:  make([]indexedToken, 0, len(d.Tokens)),
-		dict:    c.dict,
-		Matches: d.Matches,
-	}
-
-	for _, t := range d.Tokens {
-		var tokID tokenID
-		if addWords {
-			tokID = id.dict.add(t.Text)
-		} else {
-			tokID = id.dict.getIndex(t.Text)
-		}
-
-		id.Tokens = append(id.Tokens, indexedToken{
-			Line: t.Line,
-			ID:   tokID,
-		})
-
-	}
-	id.generateFrequencies()
-	id.runes = diffWordsToRunes(id, 0, id.size())
-	id.norm = id.normalized()
-	return id
 }
 
 // createTargetIndexedDocument creates an indexed document without adding the
 // words to the classifier dictionary. This should be used for matching targets, not
 // populating the corpus.
 func (c *Classifier) createTargetIndexedDocument(in []byte) *indexedDocument {
-	doc := tokenize(in)
-	return c.generateIndexedDocument(doc, false)
+	return tokenize(in, c.dict, false)
 }
 
 func (c *Classifier) generateDocName(category, name, variant string) string {

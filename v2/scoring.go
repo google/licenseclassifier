@@ -41,7 +41,7 @@ func (c *Classifier) score(id string, unknown, known *indexedDocument, unknownSt
 	knownLength := known.size()
 	diffs := docDiff(id, unknown, unknownStart, unknownEnd, known, 0, knownLength)
 
-	start, end := diffRange(known.norm, diffs)
+	start, end := diffRange(known.Norm, diffs)
 	distance := scoreDiffs(id, diffs[start:end])
 
 	if c.tc.traceScoring(known.s.origin) {

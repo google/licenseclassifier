@@ -15,6 +15,7 @@
 package classifier
 
 import (
+	"io"
 	"strings"
 	"testing"
 
@@ -56,7 +57,7 @@ func TestCleanupToken(t *testing.T) {
 		},
 	}
 	for _, test := range tests {
-		if got := cleanupToken(test.input); got != test.output {
+		if got := cleanupToken(0, test.input, true); got != test.output {
 			t.Errorf("%q: got %q want %q", test.input, got, test.output)
 		}
 	}
@@ -66,8 +67,21 @@ func TestTokenize(t *testing.T) {
 	tests := []struct {
 		name   string
 		input  string
-		output *document
+		output *indexedDocument
 	}{
+		{name: "hyphenization recovery",
+			input: `basket-
+ball`,
+			output: &indexedDocument{
+				Tokens: []indexedToken{
+					{
+						ID:   1,
+						Line: 1,
+					},
+				},
+				Norm: "basketball",
+			},
+		},
 		{
 			name: "basic scenario",
 			input: `The AWESOME Project LICENSE
@@ -80,60 +94,109 @@ Copyright 1996-2002, 2006 by A. Developer
 Introduction
 
 The AWESOME Project`,
-			output: &document{
-				Tokens: []*token{
+			output: &indexedDocument{
+				Tokens: []indexedToken{
 					{
-						Text: "the",
+						ID:   1,
 						Line: 1,
 					},
 					{
-						Text: "awesome",
+						ID:   2,
 						Line: 1,
 					},
 					{
-						Text: "project",
+						ID:   3,
 						Line: 1,
 					},
 					{
-						Text: "license",
+						ID:   4,
 						Line: 1,
 					},
 					{
-						Text: "modifications",
+						ID:   5,
 						Line: 3,
 					},
 					{
-						Text: "prohibited",
+						ID:   6,
 						Line: 4,
 					},
 					{
-						Text: "introduction",
+						ID:   7,
 						Line: 8,
 					},
 					{
-						Text: "the",
+						ID:   1,
 						Line: 10,
 					},
 					{
-						Text: "awesome",
+						ID:   2,
 						Line: 10,
 					},
 					{
-						Text: "project",
+						ID:   3,
 						Line: 10,
 					},
 				},
 				Matches: Matches{&Match{Name: "Copyright", Confidence: 1.0, MatchType: "Copyright", StartLine: 6, EndLine: 6}},
+				Norm:    "the awesome project license modifications prohibited introduction the awesome project",
 			},
 		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			d := tokenize([]byte(test.input))
-			if !cmp.Equal(d, test.output, cmpopts.IgnoreUnexported(document{})) {
-				t.Errorf("%s failed: %s", test.name, cmp.Diff(d, test.output))
+			d := tokenize([]byte(test.input), newDictionary(), true)
+			if diff := cmp.Diff(d, test.output, cmpopts.IgnoreUnexported(indexedDocument{})); diff != "" {
+				t.Errorf("%s failed:\nDiff(+got,-want): %s", test.name, diff)
 			}
 		})
+	}
+}
+
+type mockReader struct {
+	t        *testing.T
+	schedule []int
+	cur      int
+}
+
+func (m *mockReader) Read(buf []byte) (int, error) {
+	if m.cur > len(m.schedule) {
+		m.t.Fatal("Unexpected read on mock")
+	}
+
+	if m.cur == len(m.schedule) {
+		return 0, io.EOF
+	}
+
+	if len(buf) != m.schedule[m.cur] {
+		m.t.Fatalf("step %d: got %d, want %d", m.cur, len(buf), m.schedule[m.cur])
+	}
+	m.cur++
+
+	for i := range buf {
+		buf[i] = 'a'
+	}
+
+	return len(buf), nil
+}
+
+func TestTokenizerBuffering(t *testing.T) {
+	dict := newDictionary()
+	mr := mockReader{
+		t:        t,
+		schedule: []int{1024, 1020, 1020},
+	}
+	d, err := tokenizeStream(&mr, true, dict, true)
+	if err != nil {
+		t.Errorf("Read returned unexpected error: %v", err)
+	}
+
+	// Do a basic test to make sure the data returned is sound
+	if len(d.Tokens) != 1 {
+		t.Errorf("Got %d tokens, expected 1", len(d.Tokens))
+	}
+
+	if len(d.Norm) != 3064 {
+		t.Errorf("Got %d bytes, expected 3064", len(d.Norm))
 	}
 }
 
@@ -229,10 +292,11 @@ The FreeType Project`,
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			d := tokenize([]byte(test.input))
+			dict := newDictionary()
+			d := tokenize([]byte(test.input), dict, true)
 			var b strings.Builder
 			for _, tok := range d.Tokens {
-				b.WriteString(tok.Text)
+				b.WriteString(dict.getWord(tok.ID))
 				b.WriteString(" ")
 			}
 			actual := strings.TrimSpace(b.String())
