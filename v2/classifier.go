@@ -230,8 +230,10 @@ func NewClassifier(threshold float64) *Classifier {
 // It is an invariant of the classifier that calling Match(Normalize(in)) will
 // return the same results as Match(in).
 func (c *Classifier) Normalize(in []byte) []byte {
-	text, _ := normalizeDoc(in, false)
-	doc := extractDoc(text, false, nil)
+	doc, err := tokenizeStream(bytes.NewReader(in), false, c.dict, true)
+	if err != nil {
+		panic("should not be reachable, since bytes.NewReader().Read() should never fail")
+	}
 
 	var buf bytes.Buffer
 
@@ -239,26 +241,28 @@ func (c *Classifier) Normalize(in []byte) []byte {
 	case 0:
 		return nil
 	case 1:
-		buf.WriteString(doc.Tokens[0].Text)
+		buf.WriteString(c.dict.getWord(doc.Tokens[0].ID))
 		return buf.Bytes()
 	}
 
 	prevLine := 1
-	buf.WriteString(doc.Tokens[0].Text)
+	buf.WriteString(c.dict.getWord(doc.Tokens[0].ID))
 	for _, t := range doc.Tokens[1:] {
 		// Only write out an EOL token that incremented the line
 		if t.Line == prevLine+1 {
-			buf.WriteString("\n")
+			buf.WriteString(eol)
 		}
 
 		// Only write tokens that aren't EOL
-		if t.Text != eol {
+		txt := c.dict.getWord(t.ID)
+
+		if txt != eol {
 			// Only put a space between tokens if the previous token was on the same
 			// line. This prevents spaces after an EOL
 			if t.Line == prevLine {
 				buf.WriteString(" ")
 			}
-			buf.WriteString(t.Text)
+			buf.WriteString(txt)
 		}
 
 		prevLine = t.Line

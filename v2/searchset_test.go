@@ -63,7 +63,7 @@ func TestSearchSet_New(t *testing.T) {
 			text:        "",
 			q:           4,
 			want: &searchSet{
-				Tokens:         []indexedToken{},
+				Tokens:         nil,
 				Hashes:         make(hash),
 				Checksums:      nil,
 				ChecksumRanges: nil,
