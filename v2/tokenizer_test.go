@@ -15,6 +15,7 @@
 package classifier
 
 import (
+	"bytes"
 	"io"
 	"strings"
 	"testing"
@@ -144,7 +145,10 @@ The AWESOME Project`,
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			d := tokenize([]byte(test.input), newDictionary(), true)
+			d, err := tokenizeStream(bytes.NewReader([]byte(test.input)), true, newDictionary(), true)
+			if err != nil {
+				t.Errorf("%s failed: got unexpected error %v", test.name, err)
+			}
 			if diff := cmp.Diff(d, test.output, cmpopts.IgnoreUnexported(indexedDocument{})); diff != "" {
 				t.Errorf("%s failed:\nDiff(+got,-want): %s", test.name, diff)
 			}
@@ -293,7 +297,10 @@ The FreeType Project`,
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			dict := newDictionary()
-			d := tokenize([]byte(test.input), dict, true)
+			d, err := tokenizeStream(bytes.NewReader([]byte(test.input)), true, dict, true)
+			if err != nil {
+				t.Errorf("%s failed: got unexpected error %v", test.name, err)
+			}
 			var b strings.Builder
 			for _, tok := range d.Tokens {
 				b.WriteString(dict.getWord(tok.ID))

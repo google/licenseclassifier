@@ -16,6 +16,7 @@
 package classifier
 
 import (
+	"bytes"
 	"fmt"
 	"os"
 	"strings"
@@ -95,7 +96,10 @@ func max(a, b int) int {
 // AddContent incorporates the provided textual content into the classifier for
 // matching. This will not modify the supplied content.
 func (c *Classifier) AddContent(category, name, variant string, content []byte) {
-	doc := tokenize(content, c.dict, true)
+	// Since bytes.NewReader().Read() will never return an error, tokenizeStream
+	// will never return an error so it's okay to ignore the return value in this
+	// case.
+	doc, _ := tokenizeStream(bytes.NewReader(content), true, c.dict, true)
 	c.addDocument(category, name, variant, doc)
 }
 
@@ -114,7 +118,8 @@ func (c *Classifier) addDocument(category, name, variant string, id *indexedDocu
 // words to the classifier dictionary. This should be used for matching targets, not
 // populating the corpus.
 func (c *Classifier) createTargetIndexedDocument(in []byte) *indexedDocument {
-	return tokenize(in, c.dict, false)
+	doc, _ := tokenizeStream(bytes.NewReader(in), true, c.dict, false)
+	return doc
 }
 
 func (c *Classifier) generateDocName(category, name, variant string) string {

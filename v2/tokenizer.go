@@ -15,7 +15,6 @@
 package classifier
 
 import (
-	"bytes"
 	"html"
 	"io"
 	"regexp"
@@ -65,14 +64,6 @@ var ignorableTexts = []*regexp.Regexp{
 	regexp.MustCompile(`(?i)^(.{1,5})?copyright (\(c\) )?(\[yyyy\]|\d{4})[,.]?.*$`),
 	regexp.MustCompile(`(?i)^(.{1,5})?copyright \(c\) \[dates of first publication\].*$`),
 	regexp.MustCompile(`(?i)^\d{4}-(\d{2}|[a-z]{3})-\d{2}$`),
-}
-
-func tokenize(in []byte, dict *dictionary, updateDict bool) *indexedDocument {
-	// Since bytes.NewReader().Read() will never return an error, tokenizeStream
-	// will never return an error so it's okay to ignore the return value in this
-	// case.
-	id, _ := tokenizeStream(bytes.NewReader(in), true, dict, updateDict)
-	return id
 }
 
 // tokenizeStream reads bytes from src and produces an indexedDocument of its
