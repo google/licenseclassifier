@@ -65,8 +65,11 @@ func (d Matches) Less(i, j int) bool {
 }
 
 // Match reports instances of the supplied content in the corpus.
-func (c *Classifier) match(in []byte) Results {
-	id := c.createTargetIndexedDocument(in)
+func (c *Classifier) match(in io.Reader) (Results, error) {
+	id, err := tokenizeStream(in, true, c.dict, false)
+	if err != nil {
+		return Results{}, err
+	}
 
 	firstPass := make(map[string]*indexedDocument)
 	for l, d := range c.docs {
@@ -85,7 +88,7 @@ func (c *Classifier) match(in []byte) Results {
 		return Results{
 			Matches:         nil,
 			TotalInputLines: 0,
-		}
+		}, nil
 	}
 
 	// Perform the expensive work of generating a searchset to look for token runs.
@@ -185,7 +188,7 @@ func (c *Classifier) match(in []byte) Results {
 	return Results{
 		Matches:         out,
 		TotalInputLines: id.Tokens[len(id.Tokens)-1].Line,
-	}
+	}, nil
 }
 
 // Classifier provides methods for identifying open source licenses in text
@@ -316,16 +319,16 @@ func (c *Classifier) SetTraceConfiguration(in *TraceConfiguration) {
 // Match finds matches within an unknown text. This will not modify the contents
 // of the supplied byte slice.
 func (c *Classifier) Match(in []byte) Results {
-	return c.match(in)
+	// Since bytes.NewReader().Read() will never return an error, tokenizeStream
+	// will never return an error so it's okay to ignore the return value in this
+	// case.
+	res, _ := c.MatchFrom(bytes.NewReader(in))
+	return res
 }
 
 // MatchFrom finds matches within the read content.
 func (c *Classifier) MatchFrom(in io.Reader) (Results, error) {
-	b, err := ioutil.ReadAll(in)
-	if err != nil {
-		return Results{}, fmt.Errorf("classifier couldn't read: %w", err)
-	}
-	return c.Match(b), nil
+	return c.match(in)
 }
 
 func detectionType(in string) string {
