@@ -4,13 +4,17 @@
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-//     http://www.apache.org/licenses/LICENSE-2.0
+//	http://www.apache.org/licenses/LICENSE-2.0
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+//
+// Select test data comes from
+// The Project Gutenberg eBook of The humour of Ireland, by D. J., (David James), (1866-1917) O'Donoghue
+
 package stringclassifier
 
 import (
@@ -52,65 +56,46 @@ vulputate, tempus leo commodo, accumsan nulla.`
 varius enim mattis, rhoncus lectus id, aliquet. Phasellus eget ex in dolor
 feugiat ultricies. Etiam interdum sit amet nisl in placerat.  Sed vitae enim
 vulputate, tempus leo commodo, accumsan nulla.`
-
-	postmodernThesisCollapse = `1. Expressions of collapse
-
-If one examines postcultural Marxism, one is faced with a choice: either
-reject capitalist submodern theory or conclude that the purpose of the reader
-is significant form. Bataille uses the term ‘capitalist construction’ to denote
-not, in fact, discourse, but prediscourse.
-
-Therefore, in Stardust, Gaiman analyses postcultural Marxism; in
-The Books of Magic, although, he denies capitalist submodern theory. If
-capitalist construction holds, we have to choose between capitalist submodern
-theory and Baudrillardist simulacra.
-
-However, conceptualist socialism implies that narrativity may be used to
-oppress the proletariat, given that sexuality is distinct from art. The subject
-is interpolated into a capitalist construction that includes language as a
-paradox.
+	humourOfIreland = `As a rule, Irish poets have not extracted a pessimistic
+philosophy from liquor; they are “elevated,” not depressed, and do not deem
+it essential to the production of a poem that its author should be a cynic or
+an evil prophet. One of the best attributes of Irish poetry is its constant
+expression of the natural emotions. Previous to the close of the
+seventeenth[xvi] century, it is said, drunkenness was not suggested by the
+poets as common in Ireland—the popularity of Bacchanalian songs since that
+date seems to prove that the vice soon became a virtue. Maginn is the
+noisiest of modern revellers, and easily roars the others down.
 `
-	postmodernThesisNarratives = `1. Narratives of failure
-
-The main theme of the works of Joyce is the defining characteristic, and some
-would say the economy, of neocultural class. But Bataille promotes the use of
-socialist realism to deconstruct sexual identity.
-
-The subject is interpolated into a Baudrillardist simulation that includes
-consciousness as a whole. Thus, the primary theme of Pickett's[1] model of
-socialist realism is the role of the reader as artist.
-
-The subject is contextualised into a postcapitalist discourse that includes
-language as a paradox. It could be said that if Baudrillardist simulation
-holds, the works of Gibson are postmodern. The characteristic theme of the
-works of Gibson is the common ground between society and narrativity. However,
-Sartre uses the term 'postcapitalist discourse' to denote not, in fact,
-narrative, but postnarrative.
+	fellowInTheGoatSkin = `There was a poor widow living down there near the Iron
+Forge when the country was all covered with forests, and you might walk on
+the tops of trees from Carnew to the Lady’s Island, and she had one boy. She
+was very poor, as I said before, and was not able to buy clothes for her son.
+So when she was going out she fixed him snug and combustible in the ash-pit,
+and piled the warm ashes about him. The boy knew no better, and was as happy
+as the day was long; and he was happier still when a neighbour[10] gave his
+mother a kid to keep him company when herself was abroad. The kid and the lad
+played like two may-boys; and when she was old enough to give milk, wasn’t it
+a godsend to the little family? You won’t prevent the boy from growing up
+into a young man, but not a screed of clothes had he then no more than when
+he was a gorsoon.
 `
-	postmodernThesisFatalFlaw = `1. Contexts of fatal flaw
+	oldCrowYoungCrow = `There was an old crow teaching a young crow one day, and
+he said to him, “Now, my son,” says he, “listen to the advice I’m going to
+give you. If you see a person coming near you and stooping, mind yourself,
+and be on your keeping; he’s stooping for a stone to throw at you.”
 
-"Narrativity is part of the dialectic of culture," says Marx; however,
-according to Hamburger[1] , it is not so much narrativity that is part of the
-dialectic of culture, but rather the stasis, and hence the defining
-characteristic, of narrativity. Bataille promotes the use of Batailleist
-'powerful communication' to modify society.
+“But tell me,” says the young crow, “what should I do if he had a stone
+already down in his pocket?”
 
-If one examines the presemioticist paradigm of reality, one is faced with a
-choice: either reject Batailleist 'powerful communication' or conclude that
-concensus must come from the masses. Therefore, Baudrillard uses the term 'the
-presemioticist paradigm of reality' to denote the difference between class and
-society. The subject is interpolated into a subtextual capitalist theory that
-includes consciousness as a whole.
-
-However, Pickett[2] implies that we have to choose between neotextual feminism
-and dialectic appropriation. Debord suggests the use of subtextual capitalist
-theory to deconstruct the status quo.
+“Musha, go ’long out of that,” says the old crow, “you’ve learned enough; the
+devil another learning I’m able to give you.”
 `
 	nullifiable = `[[ , _ , _ , _
 ? _ : _
 ? _ : _
 ? _ : _
-]}
+]
+}
 `
 	nonWords = regexp.MustCompile("[[:punct:]]+")
 )
@@ -203,11 +188,11 @@ func TestClassify_MultipleMatch(t *testing.T) {
 		{
 			description: "Exact text match",
 			c:           c,
-			input:       postmodernThesisNarratives + declaration + postmodernThesisCollapse,
+			input:       fellowInTheGoatSkin + declaration + humourOfIreland,
 			want: []result{
 				{
 					key:     "declaration",
-					offset:  842,
+					offset:  845,
 					minConf: 1.0,
 					maxConf: 1.0,
 				},
@@ -216,11 +201,11 @@ func TestClassify_MultipleMatch(t *testing.T) {
 		{
 			description: "Partial text match",
 			c:           c,
-			input:       postmodernThesisNarratives + modifiedLorem + postmodernThesisCollapse,
+			input:       fellowInTheGoatSkin + modifiedLorem + humourOfIreland,
 			want: []result{
 				{
 					key:     "loremipsum",
-					offset:  842,
+					offset:  845,
 					minConf: 0.90,
 					maxConf: 0.91,
 				},
@@ -229,17 +214,17 @@ func TestClassify_MultipleMatch(t *testing.T) {
 		{
 			description: "Two partial matches",
 			c:           c,
-			input:       postmodernThesisNarratives + modifiedLorem + postmodernThesisCollapse + modifiedGettysburg + postmodernThesisFatalFlaw,
+			input:       fellowInTheGoatSkin + modifiedLorem + humourOfIreland + modifiedGettysburg + oldCrowYoungCrow,
 			want: []result{
 				{
 					key:     "loremipsum",
-					offset:  842,
+					offset:  845,
 					minConf: 0.90,
 					maxConf: 0.91,
 				},
 				{
 					key:     "gettysburg",
-					offset:  1900,
+					offset:  1750,
 					minConf: 0.86,
 					maxConf: 0.87,
 				},
@@ -248,17 +233,17 @@ func TestClassify_MultipleMatch(t *testing.T) {
 		{
 			description: "Partial matches of similar text",
 			c:           c,
-			input:       postmodernThesisNarratives + modifiedLorem + postmodernThesisCollapse + lessModifiedLorem + postmodernThesisFatalFlaw,
+			input:       fellowInTheGoatSkin + modifiedLorem + humourOfIreland + lessModifiedLorem + oldCrowYoungCrow,
 			want: []result{
 				{
 					key:     "loremipsum",
-					offset:  1900,
+					offset:  1750,
 					minConf: 0.98,
 					maxConf: 0.99,
 				},
 				{
 					key:     "loremipsum",
-					offset:  842,
+					offset:  845,
 					minConf: 0.90,
 					maxConf: 0.91,
 				},
@@ -273,17 +258,17 @@ func TestClassify_MultipleMatch(t *testing.T) {
 		{
 			description: "No match",
 			c:           c,
-			input:       postmodernThesisNarratives + postmodernThesisCollapse,
+			input:       fellowInTheGoatSkin + humourOfIreland,
 			want:        nil,
 		},
 		{
 			description: "Exact text match, with extra word and non-word normalizer",
 			c:           cNormalize,
-			input:       postmodernThesisNarratives + gettysburgExtraWord + postmodernThesisCollapse,
+			input:       fellowInTheGoatSkin + gettysburgExtraWord + humourOfIreland,
 			want: []result{
 				{
 					key:     "gettysburg",
-					offset:  820,
+					offset:  825,
 					minConf: 1.0,
 					maxConf: 1.0,
 				},
