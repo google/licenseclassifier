@@ -2,9 +2,7 @@ package assets
 
 import (
 	"embed"
-	"fmt"
 	"io/fs"
-	"os"
 	"strings"
 
 	classifier "github.com/google/licenseclassifier/v2"
@@ -30,7 +28,7 @@ func DefaultClassifier() (*classifier.Classifier, error) {
 		if err != nil {
 			return err
 		}
-		splits := strings.Split(path, fmt.Sprintf("%c", os.PathSeparator))
+		splits := strings.Split(path, "/")
 		category, name, variant := splits[0], splits[1], splits[2]
 		c.AddContent(category, name, variant, b)
 		return nil
