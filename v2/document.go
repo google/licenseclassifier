@@ -79,7 +79,7 @@ func computeQ(threshold float64) int {
 	// 20 times. This function returns the minimum token length, or returning
 	// a value of 1 if necessary (since a threshold level below 50% would generate
 	// a run of 0-length, which is meaningless.)
-	if threshold == 1.0 {
+	if threshold > 0.9 {
 		return 10 // avoid divide by 0
 	}
 
