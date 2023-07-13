@@ -393,14 +393,22 @@ func (m *matcher) findMatches(known *knownValue) {
 
 		wg.Add(1)
 		go func(mr searchset.MatchRanges) {
+			defer func() {
+				if r := recover(); r != nil {
+					fmt.Println("CLASSIFIER CRASH -", r)
+					fmt.Println("KNOWN KEY: " + known.key)
+					fmt.Println("KNOWN VALUE: " + known.normalizedValue)
+					fmt.Println("UNKNOWN VALUE: " + m.normUnknown)
+				}
+				wg.Done()
+			}()
 			start, end := mr.TargetRange(m.unknown)
 			conf := levDist(m.normUnknown[start:end], known.normalizedValue)
 			if conf > 0.0 {
 				m.mu.Lock()
+				defer m.mu.Unlock()
 				m.queue.Push(&Match{Name: known.key, Confidence: conf, Offset: start, Extent: end - start})
-				m.mu.Unlock()
 			}
-			wg.Done()
 		}(mr)
 	}
 	wg.Wait()
