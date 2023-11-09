@@ -20,6 +20,7 @@ import (
 	"io"
 	"io/ioutil"
 	"os"
+	"path"
 	"path/filepath"
 	"sort"
 	"strings"
@@ -211,6 +212,14 @@ func NewClassifier(threshold float64) *Classifier {
 		q:         computeQ(threshold),
 	}
 	return classifier
+}
+
+var defaultThreshold = .8
+var baseLicenses = "assets"
+
+func NewDefaultClassifier() (*Classifier, error) {
+	c := NewClassifier(defaultThreshold)
+	return c, c.LoadLicenses(path.Join(baseLicenses))
 }
 
 // Normalize takes input content and applies the following transforms to aid in

@@ -36,14 +36,6 @@ type scenario struct {
 	data     []byte
 }
 
-var defaultThreshold = .8
-var baseLicenses = "assets"
-
-func classifier() (*Classifier, error) {
-	c := NewClassifier(defaultThreshold)
-	return c, c.LoadLicenses(path.Join(baseLicenses))
-}
-
 func getScenarioFilenames() ([]string, error) {
 	scenarios := "scenarios"
 	var files []string
@@ -62,7 +54,7 @@ func getScenarioFilenames() ([]string, error) {
 }
 
 func TestMatchScenarios(t *testing.T) {
-	c, err := classifier()
+	c, err := NewDefaultClassifier()
 	if err != nil {
 		t.Fatalf("couldn't instantiate standard test classifier: %v", err)
 	}
@@ -214,7 +206,7 @@ func TestLicName(t *testing.T) {
 
 func TestMatchFrom(t *testing.T) {
 	tr := iotest.TimeoutReader(strings.NewReader("some data"))
-	c, err := classifier()
+	c, err := NewDefaultClassifier()
 	if err != nil {
 		t.Fatalf("couldn't instantiate standard Google classifier: %v", err)
 	}
@@ -350,7 +342,7 @@ ball football`,
 	}
 	for _, tt := range tests {
 		t.Run(tt.input, func(t *testing.T) {
-			c, err := classifier()
+			c, err := NewDefaultClassifier()
 			if err != nil {
 				t.Fatalf("couldn't instantiate standard Google classifier: %v", err)
 			}
