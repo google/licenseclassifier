@@ -20,16 +20,22 @@ import (
 	"archive/tar"
 	"bytes"
 	"compress/gzip"
+	"errors"
 	"fmt"
 	"html"
 	"io"
+	"io/fs"
+	"log"
 	"math"
+	"os"
+	"path/filepath"
 	"regexp"
 	"sort"
 	"strings"
 	"sync"
 	"unicode"
 
+	"github.com/google/licenseclassifier/licenses"
 	"github.com/google/licenseclassifier/stringclassifier"
 	"github.com/google/licenseclassifier/stringclassifier/searchset"
 )
@@ -126,7 +132,7 @@ func New(threshold float64, options ...OptionFunc) (*License, error) {
 	}
 
 	if err := classifier.registerLicenses(); err != nil {
-		return nil, fmt.Errorf("cannot register licenses from archive: %v", err)
+		return nil, fmt.Errorf("cannot register licenses: %v", err)
 	}
 	return classifier, nil
 }
@@ -219,6 +225,10 @@ func (c *License) registerLicenses() error {
 	var contents []byte
 	var err error
 	if c.archive == nil {
+		if _, statErr := os.Stat(LicenseArchive); errors.Is(statErr, fs.ErrNotExist) {
+			// if no LicenseArchive, default to load from embedded licenses
+			return c.registerLicensesFromEmbedded()
+		}
 		contents, err = ReadLicenseFile(LicenseArchive)
 	} else {
 		contents, err = c.archive()
@@ -227,6 +237,10 @@ func (c *License) registerLicenses() error {
 		return err
 	}
 
+	return c.registerLicensesFromArchive(contents)
+}
+
+func (c *License) registerLicensesFromArchive(contents []byte) error {
 	reader := bytes.NewReader(contents)
 	gr, err := gzip.NewReader(reader)
 	if err != nil {
@@ -280,6 +294,41 @@ func (c *License) registerLicenses() error {
 			return err
 		}
 	}
+	return nil
+}
+
+func (c *License) registerLicensesFromEmbedded() error {
+	lics, err := licenses.ReadLicenseDir()
+	if err != nil {
+		log.Fatalf("error: cannot read licenses directory: %v", err)
+	}
+
+	for _, l := range lics {
+		// All license files have a ".txt" extension.
+		ext := filepath.Ext(l.Name())
+		if ext != ".txt" {
+			continue
+		}
+		name := strings.TrimSuffix(filepath.Base(l.Name()), ext)
+
+		// Read license text
+		contents, err := ReadLicenseFile(l.Name())
+		if err != nil {
+			return err
+		}
+		str := TrimExtraneousTrailingText(string(contents))
+		for _, n := range Normalizers {
+			str = n(str)
+		}
+
+		// Calculate the substrings' checksums
+		set := searchset.New(str, searchset.DefaultGranularity)
+
+		if err = c.c.AddPrecomputedValue(name, str, set); err != nil {
+			return err
+		}
+	}
+
 	return nil
 }
 
