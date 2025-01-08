@@ -180,7 +180,7 @@ var (
 	// Licenses Categorized by Type
 
 	// restricted - Licenses in this category require mandatory source
-	// distribution if we ships a product that includes third-party code
+	// distribution if we ship a product that includes third-party code
 	// protected by such a license.
 	restrictedType = sets.NewStringSet(
 		BCL,
