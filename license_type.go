@@ -371,6 +371,7 @@ var (
 		"permissive",
 		"unencumbered",
 		"by_exception_only",
+		"FORBIDDEN",
 	)
 )
 
@@ -387,6 +388,8 @@ func LicenseType(name string) string {
 		return "permissive"
 	case unencumberedType.Contains(name):
 		return "unencumbered"
+	case byExceptionOnlyType.Contains(name):
+		return "by_exception_only"
 	case forbiddenType.Contains(name):
 		return "FORBIDDEN"
 	}
