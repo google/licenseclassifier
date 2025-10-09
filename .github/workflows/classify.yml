@@ -1,0 +1,48 @@
+name: Go Build
+
+on:
+  workflow_call:
+    inputs:
+      file_to_classify:
+        description: 'The file to run the license classifier against'
+        required: true
+        type: string
+    outputs:
+      license_name:
+        description: "The name of the license found"
+        value: ${{ jobs.build.outputs.license_name }}
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    outputs:
+      license_name: ${{ steps.classify.outputs.license_name }}
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Set up Go
+      uses: actions/setup-go@v4
+      with:
+        go-version: '1.21'
+
+    - name: Cache generated licenses
+      id: cache-licenses
+      uses: actions/cache@v3
+      with:
+        path: licenses
+        key: ${{ runner.os }}-licenses-${{ hashFiles('tools/license_serializer/license_serializer.go', 'licenses/**/*.txt') }}
+
+    - name: Run license serializer
+      if: steps.cache-licenses.outputs.cache-hit != 'true'
+      run: go run tools/license_serializer/license_serializer.go -output licenses
+
+    - name: Run license classifier
+      id: classify
+      run: |
+        output=$(go run tools/identify_license/identify_license.go ${{ inputs.file_to_classify }})
+        if [[ "$output" == *"no license found"* ]]; then
+          license_name="unknown"
+        else
+          license_name=$(echo "$output" | cut -d':' -f2 | cut -d'(' -f1 | xargs)
+        fi
+        echo "license_name=$license_name" >> $GITHUB_OUTPUT
