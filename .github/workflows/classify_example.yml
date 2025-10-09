@@ -1,0 +1,16 @@
+# This is an example of how to use the reusable workflow in .github/workflows/classify.yml
+name: Classify License File
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  run-classifier:
+    uses: ./.github/workflows/classify.yml
+    with:
+      file_to_classify: 'LICENSE'
