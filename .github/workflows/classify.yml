@@ -19,6 +19,8 @@ jobs:
       license_name: ${{ steps.classify.outputs.license_name }}
     steps:
     - uses: actions/checkout@v3
+      with:
+        repository: google/licenseclassifier
 
     - name: Set up Go
       uses: actions/setup-go@v4
