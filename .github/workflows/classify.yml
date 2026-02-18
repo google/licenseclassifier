@@ -41,10 +41,12 @@ jobs:
     - name: Run license classifier
       id: classify
       run: |
-        output=$(go run tools/identify_license/identify_license.go ${{ inputs.file_to_classify }})
+        output=$(go run tools/identify_license/identify_license.go ${INPUTS_FILE_TO_CLASSIFY})
         if [[ "$output" == *"no license found"* ]]; then
           license_name="unknown"
         else
           license_name=$(echo "$output" | cut -d':' -f2 | cut -d'(' -f1 | xargs)
         fi
         echo "license_name=$license_name" >> $GITHUB_OUTPUT
+      env:
+        INPUTS_FILE_TO_CLASSIFY: ${{ inputs.file_to_classify }}
