@@ -97,6 +97,7 @@ const (
 	EPL20                       = "EPL-2.0"
 	EUPL10                      = "EUPL-1.0"
 	EUPL11                      = "EUPL-1.1"
+	EUPL12                      = "EUPL-1.2"
 	Facebook2Clause             = "Facebook-2-Clause"
 	Facebook3Clause             = "Facebook-3-Clause"
 	FacebookExamples            = "Facebook-Examples"
@@ -232,6 +233,9 @@ var (
 		CPL10,
 		EPL10,
 		EPL20,
+		EUPL10,
+		EUPL11,
+		EUPL12,
 		FreeImage,
 		IPL10,
 		MPL10,
