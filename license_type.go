@@ -184,11 +184,6 @@ var (
 	// protected by such a license.
 	restrictedType = sets.NewStringSet(
 		BCL,
-		CCBYND10,
-		CCBYND20,
-		CCBYND25,
-		CCBYND30,
-		CCBYND40,
 		CCBYSA10,
 		CCBYSA20,
 		CCBYSA25,
@@ -333,6 +328,11 @@ var (
 	// fall into this category.
 	byExceptionOnlyType = sets.NewStringSet(
 		Beerware,
+		CCBYND10,
+		CCBYND20,
+		CCBYND25,
+		CCBYND30,
+		CCBYND40,
 		OFL11,
 		OpenVision,
 	)
