@@ -69,7 +69,19 @@ func (b *ClassifierBackend) SetTraceConfiguration(tc *classifier.TraceConfigurat
 }
 
 // ClassifyLicenses runs the license classifier over the given file.
-func (b *ClassifierBackend) ClassifyLicenses(numTasks int, filenames []string, headers bool) (errors []error) {
+func (b *ClassifierBackend) ClassifyLicenses(numTasks int, filenames []string, headers bool) []error {
+	return b.classifyLicenses(context.Background(), numTasks, filenames, headers)
+}
+
+// ClassifyLicensesWithContext runs the license classifier over the given file.
+// Once ctx is done no further files are started, and the call returns ctx.Err()
+// after the files already in flight finish, so it can return slightly after the
+// deadline. No classification work outlives the call.
+func (b *ClassifierBackend) ClassifyLicensesWithContext(ctx context.Context, numTasks int, filenames []string, headers bool) []error {
+	return b.classifyLicenses(ctx, numTasks, filenames, headers)
+}
+
+func (b *ClassifierBackend) classifyLicenses(ctx context.Context, numTasks int, filenames []string, headers bool) (errors []error) {
 	// Create a pool from which tasks can later be started. We use a pool because the OS limits
 	// the number of files that can be open at any one time.
 	task := make(chan bool, numTasks)
@@ -83,6 +95,8 @@ func (b *ClassifierBackend) ClassifyLicenses(numTasks int, filenames []string, h
 	analyze := func(filename string) {
 		defer func() {
 			wg.Done()
+			// task is never closed, nothing ranges over it and this send runs
+			// after wg.Done(), so closing it would panic with "send on closed channel".
 			task <- true
 		}()
 		if err := b.classifyLicense(filename, headers); err != nil {
@@ -90,38 +104,30 @@ func (b *ClassifierBackend) ClassifyLicenses(numTasks int, filenames []string, h
 		}
 	}
 
+dispatch:
 	for _, filename := range filenames {
+		// checked first so a done ctx always wins over a free task slot.
+		if ctx.Err() != nil {
+			break
+		}
+		select {
+		case <-ctx.Done():
+			break dispatch
+		case <-task:
+		}
 		wg.Add(1)
-		<-task
 		go analyze(filename)
 	}
-	go func() {
-		wg.Wait()
-		close(task)
-		close(errs)
-	}()
+	wg.Wait()
+	close(errs)
 
+	if err := ctx.Err(); err != nil {
+		return []error{err}
+	}
 	for err := range errs {
 		errors = append(errors, err)
 	}
 	return errors
-}
-
-// ClassifyLicensesWithContext runs the license classifier over the given file; ensure that it will respect the timeout in the provided context.
-func (b *ClassifierBackend) ClassifyLicensesWithContext(ctx context.Context, numTasks int, filenames []string, headers bool) (errors []error) {
-	done := make(chan bool)
-	go func() {
-		errors = b.ClassifyLicenses(numTasks, filenames, headers)
-		done <- true
-	}()
-	select {
-	case <-ctx.Done():
-		err := ctx.Err()
-		errors = append(errors, err)
-		return errors
-	case <-done:
-		return errors
-	}
 }
 
 // classifyLicense is called by a Go-function to perform the actual
@@ -162,5 +168,9 @@ func (b *ClassifierBackend) classifyLicense(filename string, headers bool) error
 
 // GetResults returns the results of the classifications.
 func (b *ClassifierBackend) GetResults() results.LicenseTypes {
-	return b.results
+	// read under the lock and return a copy, so callers can sort or hold the
+	// results while another classification on this backend is appending.
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	return append(results.LicenseTypes(nil), b.results...)
 }
