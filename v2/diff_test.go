@@ -15,6 +15,7 @@
 package classifier
 
 import (
+	"sync"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
@@ -286,4 +287,21 @@ func TestDiffing(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestConcurrentDocDiff(t *testing.T) {
+	c := NewClassifier(.8)
+	c.AddContent("", "known", "", []byte("Redistribution and use in source and binary forms, with or without modification, are permitted provided that the following conditions are met."))
+	kd := c.getIndexedDocument("", "known", "")
+	ud := c.createTargetIndexedDocument([]byte("Redistribution and use in source and binary forms, with or without modification, are permitted."))
+
+	var wg sync.WaitGroup
+	for i := 0; i < 8; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			_ = docDiff("known", ud, 0, ud.size(), kd, 0, kd.size())
+		}()
+	}
+	wg.Wait()
 }
