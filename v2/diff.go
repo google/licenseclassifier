@@ -46,8 +46,11 @@ func diffRange(known string, diffs []diffmatchpatch.Diff) (start, end int) {
 }
 
 func docDiff(id string, doc1 *indexedDocument, doc1Start, doc1End int, doc2 *indexedDocument, doc2Start, doc2End int) []diffmatchpatch.Diff {
-	chars1 := doc1.runes[doc1Start:doc1End]
-	chars2 := doc2.runes[doc2Start:doc2End]
+	// go-diff appends to sub-slices of its inputs (diffHalfMatchI), which
+	// writes into their backing arrays; copy the runes so that the shared
+	// documents of the classifier are never written.
+	chars1 := append([]rune(nil), doc1.runes[doc1Start:doc1End]...)
+	chars2 := append([]rune(nil), doc2.runes[doc2Start:doc2End]...)
 
 	dmp := diffmatchpatch.New()
 	diffs := dmp.DiffMainRunes(chars1, chars2, false)
